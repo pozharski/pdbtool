@@ -12,6 +12,8 @@ defined by -a option. Allowed actions are:
                         specified ranges
     tinertia-slider     Outputs tensor of inertia information along the
                         sequence
+    center-orient       Centers the molecule at the center of mass and
+                        orients it along inertia axes
 
 Program will also print various information extracted from the input 
 PDB file. Output is defined by -p option.  Currently supported choices 
@@ -49,7 +51,8 @@ parser.add_argument('-a', '--action', action='append',
 								'rjust-resid', 
 								'extract-ranges',
 								'tinertia-ranges',
-								'tinertia-slider',],
+								'tinertia-slider',
+                                'center-orient',],
                     default = [],
                     metavar = '', help='Action to perform')
 parser.add_argument('-p', '--outprint', action='append',
@@ -177,4 +180,9 @@ for whatodo in args.action:
         print tin.frame()
     elif whatodo == 'tinertia-slider':
         pass
-
+    elif whatodo == 'center-orient':
+        remodel = model.copy()
+        remodel.shift(-remodel.GetCoM())
+        tin_remodel = remodel.GetInertiaTensor()
+        remodel.transform(tin_remodel.vr)
+        remodel.writePDB(args.outpath)
