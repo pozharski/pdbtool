@@ -1,6 +1,6 @@
 download_folder = 'pdb-download'
 
-import urllib, os, sys, gzip
+import urllib.request, os, sys, gzip
 
 def pathcode_check(value):
     if os.access(value, os.R_OK):
@@ -11,7 +11,7 @@ def pathcode_check(value):
     fpath = os.path.join(download_folder, value.lower()+os.extsep+'pdb')
     if os.access(fpath, os.R_OK):
         return fpath
-    pdbfile = urllib.urlretrieve('http://www.rcsb.org/pdb/files/'+value.lower()+'.pdb.gz')
+    pdbfile = urllib.request.urlretrieve('http://www.rcsb.org/pdb/files/'+value.lower()+'.pdb.gz')
     if pdbfile[1].type == 'text/html':
         sys.stderr.write('Failed to retrieve PDB entry '+value+'.  You need to rethink your life.\n')
         return None

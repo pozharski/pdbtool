@@ -64,7 +64,7 @@ class pdbr_helix(pdbr_ss):
                 self.comment = line[40:70]
                 self.length = int(line[71:76])
             except:
-                print line.strip()
+                print('\nFault: '+line.strip())
                 raise
         else:
             raise ValueError('Not a HELIX record:\n'+line)
@@ -102,7 +102,7 @@ class pdbr_strand(pdbr_ss):
                     self.prevResSeq = int(line[65:69])
                     self.prevICode = line[69]
             except:
-                print '\nFault: '+line.strip()
+                print('\nFault: '+line.strip())
                 raise
         else:
             raise ValueError('Not a SHEET record:\n'+line)
@@ -114,17 +114,17 @@ class pdbr_strand(pdbr_ss):
 class ssrecords:
     def __init__(self, path):
         with open(path) as f:
-            lines = filter(lambda x : re.match('(HELIX )|(SHEET )', x), f.readlines())
-        self.helices = map(pdbr_helix, filter(lambda x : re.match('HELIX ', x), lines))
-        self.strands = map(pdbr_strand, filter(lambda x : re.match('SHEET ', x), lines))
+            lines = [x for x in f.readlines() if re.match('(HELIX )|(SHEET )', x)]
+        self.helices = [pdbr_helix(x) for x in [x for x in lines if re.match('HELIX ', x)]]
+        self.strands = [pdbr_strand(x) for x in [x for x in lines if re.match('SHEET ', x)]]
         self.quarantine = []
     def get_helices(self, model):
-        return map(lambda x : x.extract(model), self.helices)
+        return [x.extract(model) for x in self.helices]
     def get_strands(self, model):
-        return map(lambda x : x.extract(model), self.strands)
+        return [x.extract(model) for x in self.strands]
     def sanitize(self):
-        self.quarantine += filter(lambda x : not x.can_range(), self.helices)
-        self.quarantine += filter(lambda x : not x.can_range(), self.strands)
-        self.helices = filter(lambda x : x.can_range(), self.helices)
-        self.strands = filter(lambda x : x.can_range(), self.strands)
+        self.quarantine += [x for x in self.helices if not x.can_range()]
+        self.quarantine += [x for x in self.strands if not x.can_range()]
+        self.helices = [x for x in self.helices if x.can_range()]
+        self.strands = [x for x in self.strands if x.can_range()]
         
