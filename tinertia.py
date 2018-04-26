@@ -73,15 +73,15 @@ class TInertia:
         retline += ' Axis 3 (%10.3f) : %10.3f %10.3f %10.3f\n' % tuple([self.abc[2]]+self.vr[2].tolist())
         return retline
 
-	def numcomp(self, other, prefix=''):
-		retline  = prefix+'_MASS %.2f %.2f\n' % (self.mass, other.mass)
-		retline += prefix+'_COM %.2f %.2f %.2f\n' % tuple(self.shift3(other))
-		retline += prefix+'_ABC %.2f %.2f %.2f %.2f %.2f %.2f\n' % tuple(self.abc.tolist()+other.abc.tolist())
+    def numcomp(self, other, prefix=''):
+        retline  = prefix+'_MASS %.2f %.2f\n' % (self.mass, other.mass)
+        retline += prefix+'_COM %.2f %.2f %.2f\n' % tuple(self.shift3(other))
+        retline += prefix+'_ABC %.2f %.2f %.2f %.2f %.2f %.2f\n' % tuple(self.abc.tolist()+other.abc.tolist())
 
     def reportcomp(self, other):
         retline  = 'Total mass change: %.1f vs %.1f\n' % (self.mass, other.mass)
         if self.mass != other.mass:
-			retline += 'WARNING: segment mass have changed. Results will reflect both changes in segment orientation and composition.\n'
+            retline += 'WARNING: segment mass have changed. Results will reflect both changes in segment orientation and composition.\n'
         retline += 'Center of mass translation:\n %.1f %.1f %.1f\n' % tuple(self.shift3(other))
         retline += 'Inertia ellipsoid dimensions: (%.1f %.1f %.1f) -> (%.1f %.1f %.1f)\n' % tuple(self.abc.tolist()+other.abc.tolist())
         return retline
