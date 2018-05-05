@@ -18,7 +18,7 @@ from scipy import   array, cos, sin, pi, radians, sqrt, dot, cross, \
 def read_multi_model_pdb(pdbin, remark_parser=None):
     if type(pdbin) == file:
         source = pdbin
-    elif type(pdbin) == str or type(pdbin) == unicode:
+    elif type(pdbin) == str:
         try:
             source = open(pdbin)
         except IOError:
@@ -60,7 +60,7 @@ def ReadPDBfile(pdbin, readcell=True):
     modelN = 0
     if type(pdbin) == file:
         source = pdbin
-    elif type(pdbin) == str or type(pdbin) == unicode:
+    elif type(pdbin) == str:
         try:
             source = open(pdbin)
         except IOError:
@@ -83,7 +83,7 @@ def ReadPDBfile(pdbin, readcell=True):
                 atoms[-1].SetUij(anisou.GetUij())
             else:
                 anisous.append(anisou)
-    if type(pdbin) == str or type(pdbin) == unicode:
+    if type(pdbin) == str:
         source.close()
     mol = pdbmolecule(atoms=atoms, cell=cell, anisous=anisous)
     if modelN > 0:
@@ -96,7 +96,7 @@ def ReadPDBfile(pdbin, readcell=True):
 def ReadPDBremarks(pdbin):
     if type(pdbin) == file:
         source = pdbin
-    elif type(pdbin) == str or type(pdbin) == unicode:
+    elif type(pdbin) == str:
         try:
             source = open(pdbin)
         except IOError:
@@ -104,14 +104,14 @@ def ReadPDBremarks(pdbin):
     else:
         return None
     remarks = RemarkParser(source)
-    if type(pdbin) == str or type(pdbin) == unicode:
+    if type(pdbin) == str:
         source.close()
     return remarks
 
 def ReadPDBCell(pdbin):
     if type(pdbin) == file:
         source = pdbin
-    elif type(pdbin) == str or type(pdbin) == unicode:
+    elif type(pdbin) == str:
         try:
             source = open(pdbin)
         except IOError:
@@ -120,7 +120,7 @@ def ReadPDBCell(pdbin):
         return None
     for line in source:
         if line[:6] == 'CRYST1':
-            if type(pdbin) == str or type(pdbin) == unicode:
+            if type(pdbin) == str:
                 source.close()
             return pdbcell(line)
     return None
@@ -128,7 +128,7 @@ def ReadPDBCell(pdbin):
 def ReadPDBTLS(pdbin):
     if type(pdbin) == file:
         source = pdbin
-    elif type(pdbin) == str or type(pdbin) == unicode:
+    elif type(pdbin) == str:
         try:
             source = open(pdbin)
         except IOError:
@@ -136,7 +136,7 @@ def ReadPDBTLS(pdbin):
     else:
         return None
     tls = TLSparser(source)
-    if type(pdbin) == str or type(pdbin) == unicode:
+    if type(pdbin) == str:
         source.close()
     return tls
 
@@ -153,7 +153,7 @@ def WritePDBTLS(tls, tlspath):
 def ReadPDBNCS(pdbin):
     if type(pdbin) == file:
         source = pdbin
-    elif type(pdbin) == str or type(pdbin) == unicode:
+    elif type(pdbin) == str:
         try:
             source = open(pdbin)
         except IOError:
@@ -161,7 +161,7 @@ def ReadPDBNCS(pdbin):
     else:
         return None
     ncs = NCSparser(source)
-    if type(pdbin) == str or type(pdbin) == unicode:
+    if type(pdbin) == str:
         source.close()
     return ncs
 
@@ -320,7 +320,7 @@ class pdbuij:
         or  the string conforming to the Uij part of the PDB formatted
         ANISOU record, i.e. 6 integers 7 symbols wide each.'''
     def __init__(self, uij):
-        if type(uij) == str or type(uij) == unicode:
+        if type(uij) == str:
             self.uij = (int(uij[:7]),
                         int(uij[7:14]),
                         int(uij[14:21]),
@@ -346,7 +346,7 @@ class pdbuij:
         return self.uij
 
     def SetValues(self, uij):
-        if type(uij) == str or type(uij) == unicode:
+        if type(uij) == str:
             self.uij = (int(uij[:7]),
                         int(uij[7:14]),
                         int(uij[14:21]),
@@ -643,7 +643,7 @@ class pdbatom:
 
     def IsProteinBackbone(self):
         ''' True if atom belongs to protein backbone, False otherwise. '''
-        return pdbnames.Is3Amino(self.resName() and pdbnames.MaybeBackbone(self.name())
+        return pdbnames.Is3Amino(self.resName()) and pdbnames.MaybeBackbone(self.name())
 
     def IsProtein(self):
         ''' True if atom belongs to a protein, False otherwise. '''
