@@ -3,13 +3,11 @@ Module for reading PDB-files.
 Includes pdbatom and pdbmolecule classes
 '''
 
-import pdbnames
-from helper import progressbar
-
 import gzip, urllib, os, random, math, sys, re, copy, logging, time
 
-import SpaceGroups
-from rotate import transform_list
+from . import pdbnames, SpaceGroups
+from .helper import progressbar
+from .rotate import transform_list
 from tinertia import TInertia
 from scipy.linalg import eigh
 from scipy import   array, cos, sin, pi, radians, sqrt, dot, cross, \
@@ -330,8 +328,7 @@ class pdbuij:
         elif type(uij) == tuple:
             self.uij = uij
         else:
-            print type(uij)
-            raise ValueError('Tuple or string expected to define Uij') 
+            raise ValueError('Tuple or string expected to define Uij, got "'+str(type(uij))+'" instead') 
 
     def GetString(self):
         return '%7d%7d%7d%7d%7d%7d' % self.uij
@@ -733,7 +730,7 @@ class pdbmolecule:
                 except IOError:
                     fin.close()
                     fout.close()
-                    print "PDBMOLECULE: I/O error.  File "+self.pdbname+" can't be opened or retrieved from PDB"
+                    sys.stderr.write("PDBMOLECULE: I/O error.  File "+self.pdbname+" can't be opened or retrieved from PDB\n")
             fin = open('pdb-download/'+self.pdbname)
             for line in fin:
                 if line[:6] == 'ATOM  ' or line[:6] == 'HETATM':
@@ -865,7 +862,7 @@ class pdbmolecule:
                 elif n2<2:
                     residues1[resid].renameAlt2Single(residues2[resid])
                 else:
-                    print resid+": different number of alt confs not yet supported"
+                    sys.stdout.write(resid+": different number of alt confs not yet supported\n")
 
     def GetChangedAlts(self, other, fProteinOnly=True):
         ''' Returns the tuple containing two lists.  First lists the residues that 
@@ -1765,9 +1762,9 @@ class pdbmolecule:
                             symlist.append([i,[a,b,c],D,symcopy])
                         if verbose:
                             if D <= cutoff:
-                                print '#%2d + [%3d %3d %3d] -- %6.1f <-- include' % (i,a,b,c,D)
+                                print('#%2d + [%3d %3d %3d] -- %6.1f <-- include' % (i,a,b,c,D))
                             else:
-                                print '#%2d + [%3d %3d %3d] -- %6.1f ' % (i,a,b,c,D)
+                                print('#%2d + [%3d %3d %3d] -- %6.1f ' % (i,a,b,c,D))
                         symate.CellShift([-a,-b,-c])
         return symlist
 
@@ -2451,7 +2448,7 @@ class pdbmolecule:
     def print_occupancy_estimates(self):
         occs = self.get_occupancy_estimates()
         for resid in sorted(occs):
-            print resid + ' %5.2f'*len(occs[resid]) % tuple(occs[resid])
+            print(resid + ' %5.2f'*len(occs[resid]) % tuple(occs[resid]))
 
     def xyz(self, listik=False):
         listik = self.__ensure_listik_(listik)
