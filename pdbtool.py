@@ -3,8 +3,7 @@ Module for reading PDB-files.
 Includes pdbatom and pdbmolecule classes
 '''
 
-from pdbnames import AMINO_ACIDS, BBLIST, CHIS, CHIMIN, AA_SIDE, \
-                                    DONORS, ACCEPTORS, MASS, VDWRADIUS
+import pdbnames
 from helper import progressbar
 
 import gzip, urllib, os, random, math, sys, re, copy, logging, time
@@ -15,36 +14,6 @@ from tinertia import TInertia
 from scipy.linalg import eigh
 from scipy import   array, cos, sin, pi, radians, sqrt, dot, cross, \
                     randn, zeros, matrix, ones, floor, nonzero
-
-def IsHetero(name):
-    return not (Is3Amino(name) or name=='HOH')
-
-def Is3Amino(name):
-    return name in AMINO_ACIDS
-
-def IsWater(name):
-    return (name == 'HOH')
-
-def IsAtomIDWater(atomid):
-    return atomid[5:8] == 'HOH'
-
-def IsAtomIDHetero(atomid):
-    return not (atomid[5:8] == 'HOH' or atomid[5:8] in AMINO_ACIDS)
-
-def IsAtomIDAmino(atomid):
-    return atomid[5:8] in AMINO_ACIDS
-
-def IsAtomIDProteinBackbone(atomid):
-    return (atomid[5:8] in AMINO_ACIDS) and (atomid[:4].strip() in BBLIST)
-
-def IsAtomIDProteinSideChain(atomid):
-    return (atomid[5:8] in AMINO_ACIDS) and (atomid[:4].strip() not in BBLIST)
-
-def IsAtomIDBackbone(atomid):
-    return atomid[:4].strip() in BBLIST
-
-def IsAtomIDSideChain(atomid):
-    return atomid[:4].strip() not in BBLIST
 
 def read_multi_model_pdb(pdbin, remark_parser=None):
     if type(pdbin) == file:
@@ -674,23 +643,23 @@ class pdbatom:
 
     def IsProteinBackbone(self):
         ''' True if atom belongs to protein backbone, False otherwise. '''
-        return (self.resName() in AMINO_ACIDS) and (self.name() in BBLIST)
+        return pdbnames.Is3Amino(self.resName() and pdbnames.MaybeBackbone(self.name())
 
     def IsProtein(self):
         ''' True if atom belongs to a protein, False otherwise. '''
-        return self.resName() in AMINO_ACIDS
+        return pdbnames.Is3Amino(self.resName())
 
     def IsBackbone(self):
         ''' True if atom belongs to protein/DNA backbone, False otherwise. '''
-        return (self.name() in BBLIST and self.resName() != 'HOH')
+        return pdbnames.MaybeBackbone(self.name()) and pdbnames.NotWater(self.resName())
 
     def NotBackbone(self):
         ''' True if atom does not belong protein/DNA backbone, False otherwise. '''
-        return (self.name() not in BBLIST)
+        return pdbnames.NotBackbone(self.name())
 
     def IsProteinSidechain(self):
         ''' True if atom belongs to protein side chain, False otherwise. '''
-        return (self.resName() in AMINO_ACIDS) and (self.name() not in BBLIST)
+        return self.IsProtein() and pdbnames.NotBackbone(self.name())
 
     def shift(self, xyz):
         self.xyz += xyz
@@ -723,7 +692,7 @@ class pdbatom:
         return copy.deepcopy(self)
 
     def get_vdw_radius(self):
-        return VDWRADIUS.get(self.element().strip())
+        return pdbnames.GetVDWRadius(self.element().strip())
 
     def set_name(self, name):
         self.record.set_name(name)
@@ -1561,7 +1530,7 @@ class pdbmolecule:
         residues = []
         for atom in self.atoms:
             resid, resname = atom.GetResID(), atom.get_res_name()
-            if Is3Amino(resname):
+            if pdbnames.Is3Amino(resname):
                 if resid not in residues:
                     residues.append(resid)
         return residues
@@ -1576,7 +1545,7 @@ class pdbmolecule:
         residues = []
         for atom in self.atoms:
             resname = atom.get_res_name()
-            if IsHetero(resname):
+            if pdbnames.IsHetero(resname):
                 resid = atom.GetResID()
                 if resid not in residues:
                     residues.append(resid)
@@ -1937,7 +1906,7 @@ class pdbmolecule:
             listik = range(self.GetAtomNumber())
         a, b = zeros(3), 0.0
         for i in listik:
-            m, o = MASS[self.atoms[i].GetElement().upper()], self.atoms[i].GetOccupancy()
+            m, o = pdbnames.GetMass(self.atoms[i].GetElement().upper()), self.atoms[i].GetOccupancy()
             a += self.atoms[i].GetR() * m * o
             b += m * o
         return a/b
@@ -1945,7 +1914,7 @@ class pdbmolecule:
     def Rgyration(self, listik=None):
         if listik is None:
             listik = range(self.GetAtomNumber())
-        mo = array([MASS[x.element().strip()]*x.GetOccupancy() for x in array(self.atoms)[listik]]).T
+        mo = array([pdbnames.GetMass(x.element().strip())*x.GetOccupancy() for x in array(self.atoms)[listik]]).T
         r = array([x.GetR() for x in array(self.atoms)[listik]]).T
         Rcenter = (mo*r).sum(1)/mo.sum()
         return sqrt(sum(mo*((r.T-Rcenter)**2).sum(1))/sum(mo))
@@ -1954,9 +1923,9 @@ class pdbmolecule:
         if not listik:
             listik = range(self.GetAtomNumber())
         atoms = self.GetListedAtoms(listik)
-        m = array(map(lambda x : MASS.get(x.element().strip()), atoms))
-        o = array(map(lambda x : x.GetOccupancy(), atoms))
-        x, y, z = array(map(lambda x : x.GetR(), atoms)).T
+        m = array([pdbnames.GetMass(x.element().strip()) for x in atoms])
+        o = array([x.GetOccupancy() for x in atoms])
+        x, y, z = array([x.GetR() for x in atoms]).T
         return TInertia(m*o, x, y, z)
 
     def SelectionNeighborhood(self, selection, rmax=4.0, listik=None):
@@ -2066,7 +2035,7 @@ class pdbmolecule:
         residues = {}
         for atom in self.atoms:
             resid, resname = atom.GetResID(), atom.get_res_name()
-            if Is3Amino(resname):
+            if pdbnames.Is3Amino(resname):
                 if resid not in residues.keys():
                     residues[resid] = [atom]
                 else:
@@ -2349,9 +2318,7 @@ class pdbmolecule:
                 res1, res2 = self.GetAtom(i1).get_res_name(), self.GetAtom(i2).get_res_name()
                 flag = True
                 try:
-                    if name1 in DONORS[res1] and name2 in ACCEPTORS[res2]:
-                        flag = False
-                    elif name1 in ACCEPTORS[res1] and name2 in DONORS[res2]:
+                    if pdbnames.MayHBond(res1,name1,res2,name2):
                         flag = False
                 except KeyError:
                     flag = False
@@ -2405,7 +2372,7 @@ class pdbmolecule:
         return d
 
     def IsProteinAtom(self,i):
-        return Is3Amino(self.GetAtomResidueName(i))
+        return pdbnames.Is3Amino(self.GetAtomResidueName(i))
 
     def IsProteinBackboneAtom(self, i):
         return self.atoms[i].IsProteinBackbone()
@@ -2420,10 +2387,10 @@ class pdbmolecule:
         return self.atoms[i].IsSidechain()
 
     def IsHeteroAtom(self,i):
-        return IsHetero(self.GetAtomResidueName(i))
+        return pdbnames.IsHetero(self.GetAtomResidueName(i))
 
     def IsWater(self, i):
-        return IsWater(self.GetAtomResidueName(i))
+        return pdbnames.IsWater(self.GetAtomResidueName(i))
 
     def BackboneHbonds(self):
         bb=backbone(self)
@@ -3003,7 +2970,7 @@ class pdbresidue:
         return len(self.atoms)
 
     def IsAminoAcid(self):
-        return Is3Amino(self.name)
+        return pdbnames.Is3Amino(self.name)
 
     def GetCA(self):
         return self.atoms['CA']
@@ -3158,7 +3125,7 @@ class pdbresidue:
     def GetCoM(self):
         a, b = zeros(3), 0.0
         for atom in self.origatoms:
-            m, o = MASS[atom.GetElement().upper()], atom.GetOccupancy()
+            m, o = pdbnames.GetMass(atom.GetElement().upper()), atom.GetOccupancy()
             a += atom.GetR() * m * o
             b += m * o
         return a/b

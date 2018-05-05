@@ -225,3 +225,25 @@ VDWRADIUS = {
 'PB': 2.02
 }
 
+def Is3Amino(name):
+    return name in AMINO_ACIDS
+def IsWater(name):
+    return name == 'HOH'
+def NotWater(name):
+    return name != 'HOH'
+def IsHetero(name):
+    return not (Is3Amino(name) or IsWater(name))
+def MaybeBackbone(name):
+    return name in BBLIST
+def NotBackbone(name):
+    return name not in BBLIST
+def IsDonor(resn, atom):
+    return atom in DONORS[resn]
+def IsAcceptor(resn, atom):
+    return atom in ACCEPTORS[resn]
+def MayHBond(resn1,atom1,resn2,atom2):
+    return (IsDonor(resn1,atom1) and IsAcceptor(resn2,atom2)) or (IsDonor(resn2,atom2) and IsAcceptor(resn1,atom1))
+def GetMass(name):
+    return MASS[name]
+def GetVDWRadius(name):
+    return VDWRADIUS[name]
