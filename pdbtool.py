@@ -3,7 +3,7 @@ Module for reading PDB-files.
 Includes pdbatom and pdbmolecule classes
 '''
 
-import gzip, urllib, os, random, math, sys, re, copy, logging, time
+import gzip, urllib.request, os, random, math, sys, re, copy, logging, time
 
 from . import pdbnames, SpaceGroups
 from .helper import progressbar
@@ -720,7 +720,7 @@ class pdbmolecule:
                 os.mkdir('pdb-download')
             if not os.access('pdb-download/'+self.pdbname,os.R_OK):
                 try:
-                    pdbfile=urllib.urlretrieve('http://www.rcsb.org/pdb/files/'+self.pdbid+'.pdb.gz')
+                    pdbfile=urllib.request.urlretrieve('http://www.rcsb.org/pdb/files/'+self.pdbid+'.pdb.gz')
                     fout = open('pdb-download/'+self.pdbname, 'w')
                     fin = gzip.open(pdbfile[0])
                     for line in fin:
@@ -761,9 +761,7 @@ class pdbmolecule:
         ''' Initializes the anisotropik ADP for the atoms in listik (default
             is all the atoms in the molecule).  The overwrite flag defines if
             the ANISOU record will be overwritten if already persent.'''
-        if not listik:
-            listik = range(self.GetAtomNumber())
-        for atomi in listik:
+        for atomi in listik if listik else range(self.GetAtomNumber()):
             self.atoms[atomi].prime_uij(overwrite=overwrite)
 
     def GetSpaceGroup(self):
@@ -788,7 +786,7 @@ class pdbmolecule:
         if not listik:
             listik = range(self.GetAtomNumber())
         if type(bvalues) == float:
-            for (i, atomi) in enumerate(listik):
+            for atomi in listik:
                 self.atoms[atomi].SetB(bvalues)
         else:
             assert len(bvalues)==len(listik), 'Shape mismatch between selection and Bvalues vector.'
@@ -803,7 +801,7 @@ class pdbmolecule:
         if not listik:
             listik = range(self.GetAtomNumber())
         if type(values) == float:
-            for (i, atomi) in enumerate(listik):
+            for atomi in listik:
                 self.atoms[atomi].SetOccupancy(values)
         else:
             assert len(values)==len(listik), 'Shape mismatch between selection and values vector.'
@@ -988,7 +986,7 @@ class pdbmolecule:
             listik = self.atom_lister()
         elif type(listik) == str:
             listik = self.atom_lister(listik)
-        return sorted(set(map(lambda a : a.GetElement(), self.GetListedAtoms(listik))))
+        return sorted(set(a.GetName() for a in self.GetListedAtoms(listik)]))
 
     def get_atom_types(self, listik=None):
         if listik is None:
@@ -1078,9 +1076,9 @@ class pdbmolecule:
         ''' Returns an array of B-factor values for a list of atoms.
             Defaults to all atoms in the molecule. '''
         if not listik:
-            return array(map(lambda x : x.GetB(), self.atoms))
+            return array([x.GetB() for x in self.atoms])
         else:
-            return array(map(lambda x : x.GetB(), array(self.atoms)[listik]))
+            return array([x.GetB() for x in array(self.atoms)[listik]])
 
     def GetResidueBvector(self, mode='lin'):
         bs = []
