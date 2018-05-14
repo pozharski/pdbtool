@@ -225,6 +225,9 @@ VDWRADIUS = {
 'PB': 2.02
 }
 
+POLARS = ['F', 'SE', 'CL',  'N', 'O', 'P', 'S']
+METALS = ['MN', 'MG', 'HG', 'CA', 'CL', 'K', 'FE', 'CO', 'NA', 'LI', 'ZN', 'PB', 'CU', 'NI']
+
 def Is3Amino(name):
     return name in AMINO_ACIDS
 def IsWater(name):
@@ -247,3 +250,7 @@ def GetMass(name):
     return MASS[name]
 def GetVDWRadius(name):
     return VDWRADIUS[name]
+def IsPolar(name):
+    return name in POLARS
+def IsMetal(name):
+    return name in METALS
