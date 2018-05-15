@@ -11,7 +11,8 @@ from .rotate import transform_list
 from tinertia import TInertia
 from scipy.linalg import eigh
 from scipy import   array, cos, sin, pi, radians, sqrt, dot, cross, \
-                    randn, zeros, matrix, ones, floor, nonzero
+                    randn, zeros, matrix, ones, floor, nonzero, \
+                    degrees, acos, arctan2
 
 def read_multi_model_pdb(pdbin, remark_parser=None):
     if type(pdbin) == file:
@@ -509,6 +510,9 @@ class pdbatom:
     def name(self):
         return self.record.name()
 
+    def mass(self):
+        return pdbnames.GetMass(self.record.element().strip())
+
     def resName(self):
         return self.record.resName()
 
@@ -706,6 +710,17 @@ class pdbatom:
     def rat(self):
         return self.record.rat()
 
+    def dx(self, other):
+        return other.xyz[0]-self.xyz[0]
+    def dy(self, other):
+        return other.xyz[1]-self.xyz[1]
+    def dz(self, other):
+        return other.xyz[2]-self.xyz[2]
+    def dr(self, other):
+        return other.xyz-self.xyz
+    def distance(self, other):
+        return sqrt((self.dr(other)**2).sum())
+
 class single_pdbatom(pdbatom):
 
     def __init__(self, line):
@@ -850,8 +865,8 @@ class pdbmolecule:
         self.AppendAtom(other.GetAtoms())
 
     def matchAlts(self, other):
-        listik1 = self.ListResidues(hasAltConf=True, fProteinOnly=True)
-        listik2 = other.ListResidues(hasAltConf=True, fProteinOnly=True)
+        listik1 = self.resid_lister(listik=self.merge_listers(['altconf','protein']))
+        listik2 = other.resid_lister(listik=other.merge_listers(['altconf','protein']))
         listik = list(set(listik1).union(listik2))
         residues1 = self.GetResiduesFromList(listik)
         residues2 = other.GetResiduesFromList(listik)
@@ -1115,10 +1130,20 @@ class pdbmolecule:
                 b2[chid] = [bside]
         return (resids, b0, b1, b2)
 
-    def GetOccupancyVector(self, listik=None):
+    def GetOccupancyVector(self, listik=False):
         ''' Returns an array of occupancy values for a list of atoms.
             Defaults to all atoms in the molecule. '''
         return array([a.GetOccupancy() for a in self.atom_getter(listik=listik)])
+
+    def GetMassVector(self, listik=False):
+        ''' Returns an array of mass values for a list of atoms.
+            Defaults to all atoms in the molecule. '''
+        return array([a.mass() for a in self.atom_getter(listik=listik)])
+
+    def GetMOVector(self, listik=False):
+        ''' Returns an array of occupancy weighted masses or a list of 
+            atoms. Defaults to all atoms in the molecule. '''
+        return array([a.GetOccupancy()*a.mass() for a in self.atom_getter(listik=listik)])
 
 # --- Methods that return atom lists
 
@@ -1166,6 +1191,10 @@ class pdbmolecule:
                                     atoms in aspartic acids.  Must provide 
                                     the list of combos to include as rats 
                                     parameter
+            'altconf'           - atoms that have alternate conformer
+                                    identifier.  If acvalue parameter is
+                                    provided, only atoms that match it
+                                    are selected.
         '''
         whatlow = what.lower()
         atoms = self.GetListedAtoms(self.__ensure_listik_(listik))
@@ -1213,6 +1242,11 @@ class pdbmolecule:
             return [x for x in set(atoms).difference(kwargs['coreatoms']) if (((coreXYZ-x.GetR())**2).sum(1)<=r2cutoff).any()]
         elif whatlow == 'rat':
             return [x for x in atoms if x.rat in kwargs['rats']]
+        elif whatlow == 'altconf':
+            if kwargs.get('acvalue') is None:
+                return [x for x in atoms if x.HasAltConf()]
+            else:
+                return [x for x in atoms if x.altLoc() == kwargs['acvalue']]
 
     def atom_lister(self, what='all', listik=False, *args, **kwargs):
         ''' Returns the list of atom indices based on the string defining the 
@@ -1256,6 +1290,10 @@ class pdbmolecule:
                                     atoms in aspartic acids.  Must provide 
                                     the list of combos to include as rats 
                                     parameter
+            'altconf'           - atoms that have alternate conformer
+                                    identifier.  If acvalue parameter is
+                                    provided, only atoms that match it
+                                    are selected.
         '''
         whatlow = what.lower()
         listik = self.__ensure_listik_(listik)
@@ -1299,10 +1337,15 @@ class pdbmolecule:
             return listik
         elif whatlow == 'vicinity':
             r2cutoff = kwargs.get('rcutoff', 4.0)**2
-            coreXYZ = self.GetListCoordinateArray(kwargs['corelist'])
+            coreXYZ = self.GetCoordinateArray(kwargs['corelist'])
             return sorted([i for i in set(listik).difference(kwargs['corelist']) if (((coreXYZ-self.GetAtomR(i))**2).sum(1)<=r2cutoff).any()])
         elif whatlow == 'rat':
             return [i for i in listik if self.atoms[i].rat() in kwargs['rats']]
+        elif whatlow == 'altconf':
+            if kwargs.get('acvalue') is None:
+                return [i for i in listik if self.atoms[i].HasAltConf()]
+            else:
+                return [i for i in listik if self.atoms[i].altLoc() == kwargs['acvalue']]
 
     def merge_listers(self, whats, listik=False, *args, **kwargs):
         '''
@@ -1390,69 +1433,10 @@ class pdbmolecule:
         return chainsplit
         
     def ListCompleteResidues(self, listik):
-        resids = list(set([a.resid() for a in self.__ensure_atoms_(listik)]))
-        return [i for i,a in in self.__enumerate_atoms_(listik) if a.resid() in resids]
-
-# ---
-
-    def ListResidues(self, doSort=True, byChains=False, hasAltConf=False, fProteinOnly=False, resnames=False):
-        ''' Returns the list of residues in the molecule.  If doSort (default),
-            the list will be sorted using resid_compare() method.  Otherwise, the 
-            list will be in the same order in whic atoms appear in the pdb file.
-            If byChains, the method will return the disctionary with chain IDs
-            as keys and list of residues in the corresponding chains as values.
-            If hasAltConf, only the residues that have alternate conformers will be
-            included (otherwise a complete list is returned).
-            If resnames list of residue names is provided, only the
-            residues with matching names will be selected.'''
-        residues = []
-        if hasAltConf:
-            source = self.ListAltConf()
-        else:
-            source = range(self.GetAtomNumber())
-        if fProteinOnly:
-            source = list(set(source).intersection(self.atom_lister('protein')))
-        if resnames:
-            source = filter(lambda i : self.atoms[i].get_res_name() in resnames,
-                                                                        source)
-        for atomi in source:
-            resid = self.atoms[atomi].GetResID()
-            if resid not in residues:
-                residues.append(resid)
-        if byChains:
-            dicres = {}
-            for resid in residues:
-                chid = resid[0]
-                if chid not in dicres:
-                    dicres[chid] = [resid]
-                else:
-                    dicres[chid].append(resid)
-            if doSort:
-                for chid in dicres:
-                    dicres[chid].sort()
-            return dicres
-        else:
-            if doSort:
-                residues.sort()
-            return residues
-
-    def ListProteinResidues(self):
-        residues = []
-        for atom in self.atoms:
-            resid, resname = atom.GetResID(), atom.get_res_name()
-            if pdbnames.Is3Amino(resname):
-                if resid not in residues:
-                    residues.append(resid)
-        return residues
+        return self.atom_lister('resids', resids=self.resid_lister(listik=listik))
 
     def GetProteinResidueNumber(self):
-        return len(self.ListProteinResidues())
-
-    def ListHeteroResidues(self):
-        ''' Returns the list of residues to be considered heteroatoms.  Currently,
-            the method select residues other than twenty canonical amino acids and
-            waters. '''
-        return list(set([a.resid() for a in self.atom_getter('hetero')]))
+        return len(self.resid_lister('protein'))
 
     def ListAltResidues(self, fProteinOnly=False):
         ''' Returns the list of residues that contain alternate conformers.
@@ -1466,113 +1450,45 @@ class pdbmolecule:
             conformation is not present.  While this is somewhat of an unusual situation,
             matchAlts() method will produce it when only one of the two matched structures
             has an alternate conformation in a residue. '''
-        listik = []
-        residues = self.get_residues()
-        for resid in residues:
-            if residues[resid].HasAltConf():
-                listik.append(resid)
-                if fProteinOnly:
-                    if not residues[resid].IsAminoAcid():
-                        listik.pop()
-        return listik
+        residues = [x for x in self.get_residues() if x.HasAltConf()]
+        if fProteinOnly:
+            residues = [x for x in residues if x.IsAminoAcid()]
+        return list(residues.keys())
 
 # --- Methods returning average values
 
-    def GetAverageBfactor(self, group='all', chids=None, selection=[], *args, **kwargs):
-        ''' Returns the average B-factor of a group of atoms.  If chids is specified,
-            selection is restricted to certain chains.  The type of selection is
-            determined by the group parameter which may have the following values:
-                'all'       - all atoms in the molecule
-                'protein'   - only protein atoms
-                'proteinbb' - only protein backbone atoms
-                'proteinsc' - only protein side chain atoms
-                'water'     - only water atoms (residue name HOH)
-                'hetero'    - heteroatoms (e.g. not protein and not waters)
-                'resname'   - listed residue names (provide resids as parameter)
-                'list'      - index of atoms passed as selection
-                'chains'    - individual chains (returns a dictionary) '''
-        if group.lower()=='all':
-            ind = self.atom_lister('chids', chids=chids)
-        elif group.lower()=='protein':
-            if chids is not None:
-                ind = self.merge_listers(['chids','protein'], chids=chids)
-            else:
-                ind = self.atom_lister('protein')
-        elif group.lower()=='proteinbb':
-            ind = self.merge_listers(['proteinbackbone','chids'], chids=chids)
-        elif group.lower()=='proteinsc':
-            ind = self.merge_listers(['proteinsidechain','chids'], chids=chids)
-        elif group.lower()=='water':
-            ind = self.merge_listers(['water','chids'], chids=chids)
-        elif group.lower()=='hetero':
-            ind = self.merge_listers(['hetero','chids'], chids=chids)
-        elif group.lower()=='resname':
-            ind = self.atom_lister('resids', resids=resids)
-            if chids is not None:
-                ind = self.atom_lister('chids', ind, chids=chids)
-        elif group.lower()=='list':
-            ind = selection
-        elif group.lower()=='chains':
-            bvs = {}
-            for (chid,chind) in self.ListChainSplit().items():
-                bvs[chid] = self.GetListAverageB(chind)
-            return bvs
-        else:
-            return float('nan')
-        return self.GetListAverageB(ind)
+    def GetAverageBfactor(self, what='all', listik=False, *args, **kwargs):
+        ''' Returns the average B-factor of a group of atoms.  
+            Selection parameters are the same as in atom_lister method.
+        '''
+        return GetListAverageB(self.atom_lister(what, listik, *args, **kwargs))
+
+    def GetChainAverageBfactor(self, what='all', listik=False, *args, **kwargs):
+        ''' Returns a dictionary of average B-factors for each chain.
+            Selection parameters are the same as in atom_lister method.
+        '''
+        return dict([(chid,self.GetListAverageB(chind)) for (chid,chind) in self.ListChainSplit(self.atom_lister(what, listik, *args, **kwargs)).items()])
 
     def GetListAverageB(self, listik):
         bvals = self.GetBvector(listik)
         ovals = self.GetOccupancyVector(listik)
         return sum(bvals*ovals)/sum(ovals)
 
-# ---
-
-    def get_listed_resids(self, listik, doSort=True):
-        residues = []
-        for atomi in listik:
-            resid = self.atoms[atomi].GetResID()
-            if resid not in residues:
-                residues.append(resid)
-        if doSort:
-            residues.sort()
-        return residues
-
-    def get_listed_altconf(self, listik, doSort=True):
-        altconf = []
-        for atomi in listik:
-            ac = self.atoms[atomi].GetAltLoc()
-            if ac not in altconf:
-                altconf.append(ac)
-        if doSort:
-            altconf.sort()
-        return altconf
+    def get_listed_altconf(self, listik):
+        return list(set([a.GetAltLoc() for a in self.atom_getter(listik=listik)]))
 
     def GetCrystLine(self):
         ''' Return the CRYST1 pdb record for the molecule. '''
-        if self.cell == None:
-            return ''
-        else:
-            return self.cell.GetLine()
+        return '' if self.cell == None else self.cell.GetLine()
 
     def GetSymmOps(self):
-        if self.cell:
-            return SpaceGroups.symops[self.cell.GetSG()]
-        else:
-            return None
+        return SpaceGroups.symops[self.cell.GetSG()] if self.cell else None
 
     def GetSymmNum(self):
-        if self.cell:
-            return len(SpaceGroups.symops[self.cell.GetSG()])
-        else:
-            return 0
+        return len(SpaceGroups.symops[self.cell.GetSG()]) if self.cell else 0
 
     def GetFractionalCoordinates(self, r):
-        if self.cell:
-            M = self.cell.GetMcf()
-            return dot(M,r.T).T
-        else:
-            return None
+        return dot(self.cell.GetMcf(),r.T).T if self.cell else None
 
     def Fractionalize(self):
         if self.cartesian:
@@ -1591,48 +1507,31 @@ class pdbmolecule:
                 self.cartesian = True
 
     def ApplySymmetryOperator(self, i):
-        if i>0:
-            if i < self.GetSymmNum():
-                symop = self.GetSymmOps()[i]
-                self.Fractionalize()
-                for atom in self.atoms:
-                    atom.ApplyOperator(symop)
-                self.Cartesianize()
+        if i>0 and i < self.GetSymmNum():
+            symop = self.GetSymmOps()[i]
+            self.Fractionalize()
+            for atom in self.atoms:
+                atom.ApplyOperator(symop)
+            self.Cartesianize()
 
     def CreateSymate(self, i, cell_shift=array([0.0,0.0,0.0])):
         if i==0:
             return self.copy()
-        elif i>0:
-            if i < self.GetSymmNum():
-                x = self.copy()
-                x.ApplySymmetryOperator(i)
-                if array(cell_shift).any():
-                    x.CellShift(cell_shift)
-                return x
+        elif i>0 and i < self.GetSymmNum():
+            x = self.copy()
+            x.ApplySymmetryOperator(i)
+            if array(cell_shift).any():
+                x.CellShift(cell_shift)
+            return x
         return None
 
-    def GetListCoordinateArray(self, listik=None):
-        if listik:
-            xyz = []
-            for i in listik:
-                xyz.append(self.GetAtom(i).GetR())
-            return array(xyz)
-        else:
-            return self.GetCoordinateArray()
-
-    def GetCoordinateArray(self):
+    def GetCoordinateArray(self, listik=False):
         ''' Return the Nx3 array of individual atom coordinates. '''
-        return array(map(lambda x : x.GetR(), self.atoms))
+        return array([x.GetR() for x in self.atom_getter(listik=listik)])
 
     def SymateDistance(self, i, cell_shift=array([0.0,0.0,0.0])):
         symate = self.CreateSymate(i, cell_shift)
-        if symate:
-            return self.ShortestApproach(symate)
-#            xyz0 = self.GetCoordinateArray()
-#            xyz1 = symate.GetCoordinateArray()
-#            N = self.GetAtomNumber()
-#            return sqrt(array((matrix(xyz1.T[0]).T*ones(N)).T-matrix(xyz0.T[0]).T*ones(N))**2+array((matrix(xyz1.T[1]).T*ones(N)).T-matrix(xyz0.T[1]).T*ones(N))**2+array((matrix(xyz1.T[2]).T*ones(N)).T-matrix(xyz0.T[2]).T*ones(N))**2).min()
-        return None
+        return self.ShortestApproach(symate) if symate else None
 
     def ShortestApproach(self, other):
         xyz0 = self.GetCoordinateArray()
@@ -1731,15 +1630,10 @@ class pdbmolecule:
             self.Cartesianize()
 
     def distance(self,i,j):
-        return math.sqrt(((self.atoms[i].xyz-self.atoms[j].xyz)**2).sum())
-#        return math.sqrt((self.atoms[i].x-self.atoms[j].x)**2 + (self.atoms[i].y-self.atoms[j].y)**2 + (self.atoms[i].z-self.atoms[j].z)**2)
+        return sqrt(((self.atoms[i].xyz-self.atoms[j].xyz)**2).sum())
 
     def select(self,name=None,altloc=None,resn=None,resid=None):
-        ind = []
-        for (i,atom) in enumerate(self.atoms):
-            if atom.test(name,altloc,resn,resid):
-                ind.append(i)
-        return ind
+        return [i for i,atom in self.__enumerate_atoms_() if atom.test(name,altloc,resn,resid)]
 
     def idselect(self, atid):
         return self.select(name=atid.GetAtomName(), resid=atid.ResID(), altloc=atid.GetAltLoc())[0]
@@ -1747,12 +1641,17 @@ class pdbmolecule:
     def angle(self,i,j,k):
         r1 = self.r(j,i)
         r2 = self.r(j,k)
-        return math.degrees(math.acos((r1*r2).sum()/math.sqrt((r1**2).sum()*(r2**2).sum())))
-#        return math.degrees(math.acos(self.dotprod(r1,r2)/(self.vecnorm(r1)*self.vecnorm(r2))))
+        return degrees(acos((r1*r2).sum()/sqrt((r1**2).sum()*(r2**2).sum())))
 
     def r(self,i,j):
         return self.atoms[j].xyz - self.atoms[i].xyz
-#        return [self.atoms[j].x-self.atoms[i].x, self.atoms[j].y-self.atoms[i].y, self.atoms[j].z-self.atoms[i].z]
+
+    def dx(self,i,j):
+        return self.atoms[j].xyz[0] - self.atoms[i].xyz[0]
+    def dy(self,i,j):
+        return self.atoms[j].xyz[1] - self.atoms[i].xyz[1]
+    def dz(self,i,j):
+        return self.atoms[j].xyz[2] - self.atoms[i].xyz[2]
 
     def torsion(self,i,j,k,l):
         b1 = self.r(i,j)
@@ -1760,8 +1659,8 @@ class pdbmolecule:
         b3 = self.r(k,l)
         b2xb1 = cross(b2,b1)
         x = (b3*cross(b2,b2xb1)).sum()
-        y = math.sqrt((b2**2).sum())*(b3*b2xb1).sum()
-        return math.degrees(math.atan2(-y,x))
+        y = sqrt((b2**2).sum())*(b3*b2xb1).sum()
+        return degrees(arctan2(-y,x))
 
     def pick(self,atomid):
         ind = None
@@ -1779,12 +1678,13 @@ class pdbmolecule:
             are bond distances.
             Intra-residue contacts are included.  Use first_shell() method to
             obtain the inter-residue contacts only.'''
-        bonds = {}
-        for (atomj,atom) in enumerate(self.atoms):
-            if not (polaronly and atom.GetElement()=='C'):
-                D = self.distance(atomi,atomj)
-                if D < rmax:
-                    bonds[atomj] = D
+        atom = self.atoms[atomi]
+        listik = self.atom_lister('polar') if polaronly else self.atom_lister()
+        listik = [i for (i,a) in self.__enumerate_atoms_(listik) if abs(atom.dx(a))<rmax]
+        listik = [i for (i,a) in self.__enumerate_atoms_(listik) if abs(atom.dy(a))<rmax]
+        listik = [i for (i,a) in self.__enumerate_atoms_(listik) if abs(atom.dz(a))<rmax]
+        D = [(i,atom.distance(a)) for (i,a) in self.__enumerate_atoms_(listik)]
+        bonds = dict([(i,x) for (i,x) in D if x < rmax])
         bonds.pop(atomi,0)
         return bonds
 
@@ -1796,54 +1696,31 @@ class pdbmolecule:
     def first_shell(self, atomi, rmax=3.2, polaronly=True):
         ''' This is similar to environment() method, but excludes the intra-residue
             contacts (e.g. covalent bonds). '''
-        bonds = {}
-        for (atomj,atom) in enumerate(self.atoms):
-            if not (polaronly and atom.GetElement()=='C'):
-                D = self.distance(atomi,atomj)
-                if D < rmax:
-                    if not self.same_residue(atomi,atomj):
-                        bonds[atomj] = D
-        bonds.pop(atomi,0)
-        return bonds
+        return dict([(i,x) for (i,x) in self.environment(atomi, rmax, polaronly).items() if not self.same_residue(atomi,i)])
 
-    def GetCoM(self, listik=[]):
-        if not listik:
-            listik = range(self.GetAtomNumber())
-        a, b = zeros(3), 0.0
-        for i in listik:
-            m, o = pdbnames.GetMass(self.atoms[i].GetElement().upper()), self.atoms[i].GetOccupancy()
-            a += self.atoms[i].GetR() * m * o
-            b += m * o
-        return a/b
+    def GetCoM(self, listik=False):
+        mo = self.GetMOVector(listik)
+        r = self.GetCoordinateArray(listik)
+        return sum(mo*r)/sum(mo)
 
-    def Rgyration(self, listik=None):
-        if listik is None:
-            listik = range(self.GetAtomNumber())
-        mo = array([pdbnames.GetMass(x.element().strip())*x.GetOccupancy() for x in array(self.atoms)[listik]]).T
-        r = array([x.GetR() for x in array(self.atoms)[listik]]).T
+    def Rgyration(self, listik=False):
+        mo = self.GetMOVector(listik).T
+        r = self.GetCoordinateArray(listik).T
         Rcenter = (mo*r).sum(1)/mo.sum()
         return sqrt(sum(mo*((r.T-Rcenter)**2).sum(1))/sum(mo))
 
-    def GetInertiaTensor(self, listik=[]):
-        if not listik:
-            listik = range(self.GetAtomNumber())
-        atoms = self.GetListedAtoms(listik)
-        m = array([pdbnames.GetMass(x.element().strip()) for x in atoms])
-        o = array([x.GetOccupancy() for x in atoms])
-        x, y, z = array([x.GetR() for x in atoms]).T
-        return TInertia(m*o, x, y, z)
+    def GetInertiaTensor(self, listik=False):
+        mo = self.GetMOVector(listik)
+        x, y, z = self.GetCoordinateArray(listik).T
+        return TInertia(mo, x, y, z)
 
-    def SelectionNeighborhood(self, selection, rmax=4.0, listik=None):
+    def SelectionNeighborhood(self, selection, rmax=4.0, listik=False):
         ''' Returns the list of atoms that are within rmax from an atom in the 
             selection. Search can be narrowed to atoms in listik, which 
             defaults to all atoms.'''
-        if listik is None:
-            listik = range(self.GetAtomNumber())
-        if len(listik) == 0:
-            return array([])
-        listik = list(set(listik).difference(selection))
-        xyz0 = self.GetListCoordinateArray(selection)
-        xyz1 = self.GetListCoordinateArray(listik)
+        listik = list(set(self.__ensure_listik_(listik)).difference(selection))
+        xyz0 = self.GetCoordinateArray(selection)
+        xyz1 = self.GetCoordinateArray(listik)
         N0, N1 = len(xyz0), len(xyz1)
         return array(listik)[nonzero(sqrt(array((matrix(xyz1.T[0]).T*ones(N0)).T-matrix(xyz0.T[0]).T*ones(N1))**2 + array((matrix(xyz1.T[1]).T*ones(N0)).T-matrix(xyz0.T[1]).T*ones(N1))**2 + array((matrix(xyz1.T[2]).T*ones(N0)).T-matrix(xyz0.T[2]).T*ones(N1))**2).min(0)<rmax)]
 
@@ -2076,7 +1953,7 @@ class pdbmolecule:
 
     def PhiPsiList(self):
         return backbone(self).PhiPsiList()
-        reslist = self.ListProteinResidues()
+        reslist = self.resid_lister('protein')
         residues = self.GetProteinResidues()
         phi, psi = {}, {}
         for (i,resid) in enumerate(reslist):
@@ -2094,7 +1971,7 @@ class pdbmolecule:
         return (phi, psi)
 
     def BackboneTorsions(self):
-        reslist = self.ListProteinResidues()
+        reslist = self.resid_lister('protein')
         residues = self.GetProteinResidues()
         phi, psi, omega = {}, {}, {}
         for (i,resid) in enumerate(reslist):
@@ -2565,8 +2442,6 @@ class backbone:
             return False
 
     def PhiPsiList(self):
-#        reslist = self.ListProteinResidues()
-#        residues = self.GetProteinResidues()
         phi, psi = {}, {}
         for segment in self.segments:
             if len(segment) > 1:

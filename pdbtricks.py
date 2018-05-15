@@ -125,7 +125,7 @@ for whatoprint in args.outprint:
             print key + str(chanums[key]).rjust(12) + " %6.2f" % bavs[key]
     elif whatoprint == 'phipsi':
         phi, psi = model.PhiPsiList()
-        for resid in model.get_listed_resids(model.atom_lister('p_bb')):
+        for resid in model.resid_lister('p_bb')):
             print "%6s %8.2f %8.2f" % (resid, phi.get(resid, float('nan')), psi .get(resid, float('nan')))
     elif whatoprint == 'bcontrast':
         resids = filter(lambda y : array(map(lambda x : range_check(int(y[1:-1]),x), ranges.get(y[0],[]))).any(), set(map(lambda x : x.resid(), model.atoms)))
