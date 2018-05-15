@@ -1318,6 +1318,12 @@ class pdbmolecule:
         '''
         return [self.atoms[i] for i in self.merge_listers(whats, listik, *args, **kwargs)]
 
+    def resid_lister(self, what='all', listik=False, *args, **kwargs):
+        ''' Returs the list of residue IDs from an atom selection.
+            Selection parameters are the same as in atom_lister method.
+        '''
+        return list(set([a.resid() for a in self.atom_getter(what, listik, *args, **kwargs)]))
+
     def list_bcutoff(self, value, listik=False):
         ''' Returns the list of indices for atoms with B-factors less or 
             equal to the  cutoff value provided. '''
@@ -1345,6 +1351,12 @@ class pdbmolecule:
         else:
             return listik
 
+    def __ensure_atoms_(self, listik=False):
+        if listik is False:
+            return self.atoms
+        else:
+            return [self.atoms[i] for i in listik]
+
     def ListByAltConf(self, ac, listik=False):
         '''
         Return atom indices (from the listik if provided) with the selected
@@ -1366,10 +1378,10 @@ class pdbmolecule:
         '''
         return sorted(set([self.atoms[i].GetAltLoc() for i in self.__ensure_listik_(listik) if self.atoms[i].HasAltConf()]))
 
-    def ListChainSplit(self):
+    def ListChainSplit(self, listik=False):
         ''' Returns the dictionary of list of atoms from individual chains.'''
         chainsplit = {}
-        for (i,atom) in enumerate(self.atoms):
+        for (i,atom) in self.__enumerate_atoms_(listik):
             chid = atom.GetChain()
             try:
                 chainsplit[chid].append(i)
@@ -1377,23 +1389,9 @@ class pdbmolecule:
                 chainsplit[chid] = [i]
         return chainsplit
         
-    def ListBackbone(self, listik=False):
-        return filter(lambda i : self.atoms[i].IsBackbone(), self.__ensure_listik_(listik))
-
-    def ListSideChains(self, listik=False):
-        return filter(lambda i : self.atoms[i].NotBackbone(), self.__ensure_listik_(listik))
-
-    def ListCompleteResidues(self, source):
-        residues = []
-        for atomi in source:
-            resid = self.atoms[atomi].GetResID()
-            if resid not in residues:
-                residues.append(resid)
-        ind = []
-        for (i,atom) in enumerate(self.atoms):
-            if atom.GetResID() in residues:
-                ind.append(i)
-        return ind
+    def ListCompleteResidues(self, listik):
+        resids = list(set([a.resid() for a in self.__ensure_atoms_(listik)]))
+        return [i for i,a in in self.__enumerate_atoms_(listik) if a.resid() in resids]
 
 # ---
 
