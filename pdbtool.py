@@ -13,6 +13,7 @@ from scipy.linalg import eigh
 from scipy import   array, cos, sin, pi, radians, sqrt, dot, cross, \
                     randn, zeros, matrix, ones, floor, nonzero, \
                     degrees, acos, arctan2
+from collections import Counter
 
 def read_multi_model_pdb(pdbin, remark_parser=None):
     if type(pdbin) == file:
@@ -868,8 +869,8 @@ class pdbmolecule:
         listik1 = self.resid_lister(listik=self.merge_listers(['altconf','protein']))
         listik2 = other.resid_lister(listik=other.merge_listers(['altconf','protein']))
         listik = list(set(listik1).union(listik2))
-        residues1 = self.GetResiduesFromList(listik)
-        residues2 = other.GetResiduesFromList(listik)
+        residues1 = self.get_residues('resids', resids=listik)
+        residues2 = other.get_residues('resids', resids=listik)
         listik = list(set(residues1.keys()).intersection(residues2.keys()))
         for resid in listik:
             n1, n2 = residues1[resid].GetAltNum(), residues2[resid].GetAltNum()
@@ -1595,7 +1596,7 @@ class pdbmolecule:
     def WriteSymate(self, i, pdbfile):
         x = self.CreateSymate(i)
         if x:
-            x.writePDBwithCell(pdbfile)
+            x.writePDB(pdbfile)
 
     def WriteSymates(self, pdbfile, move2cell=True):
         self.__CellCheck_()
@@ -1603,7 +1604,7 @@ class pdbmolecule:
             symate = self.CreateSymate(i)
             if move2cell:
                 symate.MoveCenter2UnitCell()
-            symate.writePDBwithCell(pdbfile+str(i)+os.extsep+'pdb')
+            symate.writePDB(pdbfile+str(i)+os.extsep+'pdb')
 
     def __CellCheck_(self, line='Attempt to apply symmetry failed - no unit cell specified.'):
         assert self.cell, line
@@ -1714,186 +1715,89 @@ class pdbmolecule:
         x, y, z = self.GetCoordinateArray(listik).T
         return TInertia(mo, x, y, z)
 
-    def SelectionNeighborhood(self, selection, rmax=4.0, listik=False):
-        ''' Returns the list of atoms that are within rmax from an atom in the 
-            selection. Search can be narrowed to atoms in listik, which 
-            defaults to all atoms.'''
-        listik = list(set(self.__ensure_listik_(listik)).difference(selection))
-        xyz0 = self.GetCoordinateArray(selection)
-        xyz1 = self.GetCoordinateArray(listik)
-        N0, N1 = len(xyz0), len(xyz1)
-        return array(listik)[nonzero(sqrt(array((matrix(xyz1.T[0]).T*ones(N0)).T-matrix(xyz0.T[0]).T*ones(N1))**2 + array((matrix(xyz1.T[1]).T*ones(N0)).T-matrix(xyz0.T[1]).T*ones(N1))**2 + array((matrix(xyz1.T[2]).T*ones(N0)).T-matrix(xyz0.T[2]).T*ones(N1))**2).min(0)<rmax)]
-
-    def NeighborAtoms(self, i, rmax=4.0, listik=None):
-        ''' Return the list of atoms within rmax from atom i (could be
-            either index or pdbatom object. Search can be 
-            narrowed to atoms in listik, which defaults to all atoms.'''
-        nelist = []
-        if not listik:
-            listik = range(self.GetAtomNumber())
-        if type(i) is int:
-            for j in listik:
-                if self.distance(i,j) < rmax:
-                    nelist.append(j)
-        else:
-            for j in listik:
-                if distance(i,self.atoms[j]) < rmax:
-                    nelist.append(j)
-        return nelist
-
-    def NeighborResidues(self, resid, rmax=4.0):
-        residlist = []
-        for i in self.atom_lister('resid', resid=resid):
-            for j in self.NeighborAtoms(i=i, rmax=rmax):
-                this_resid = self.atoms[j].GetResID()
-                if this_resid not in residlist:
-                    residlist.append(this_resid)
-        return sorted(residlist)
-
     def WriteNeighborResidues(self, pdbFile, resid, rmax=4.0, self_exclude=False, header=None):
-        residlist = self.NeighborResidues(resid=resid, rmax=rmax)
-        if self_exclude:
-            residlist.remove(resid)
+        residlist = self.resid_lister(listik=self.atom_lister('vicinity',rcutoff=rmax,corelist=self.atom_lister('resid',resid=resid)))
+        if not self_exclude:
+            residlist.append(resid)
         self.WriteResidueList(pdbFile=pdbFile, residlist=residlist, header=header)
 
     def WriteResidueList(self, pdbFile, residlist, header=None):
-        fout = open(pdbFile, 'w')
-        if header == 'cell':
-            self.__headwrite_(fout, self.GetCrystLine())
-        else:
-            self.__headwrite_(fout, header)
-        for atom in self.atoms:
-            if atom.GetResID() in residlist:
+        with open(pdbFile, 'w') as fout:
+            if header == 'cell':
+                self.__headwrite_(fout, self.GetCrystLine())
+            else:
+                self.__headwrite_(fout, header)
+            for atom in self.atom_lister('resids',resids=residlist):
                 fout.write(atom.GetAtomRecord())
-        fout.close()
+            fout.write('END   \n')
 
     def WriteAtomList(self, pdbFile, atomlist, header=None):
-        fout = open(pdbFile, 'w')
-        if header == 'cell':
-            self.__headwrite_(fout, self.GetCrystLine())
-        else:
-            self.__headwrite_(fout, header)
-        for atomi in sorted(atomlist):
-            fout.write(self.GetAtom(atomi).GetAtomRecord())
-        fout.write('END   \n')
-        fout.close()
+        with open(pdbFile, 'w') as fout:
+            if header == 'cell':
+                self.__headwrite_(fout, self.GetCrystLine())
+            else:
+                self.__headwrite_(fout, header)
+            for atomi in sorted(atomlist):
+                fout.write(self.GetAtom(atomi).GetAtomRecord())
+            fout.write('END   \n')
 
-    def GetResTitle(self, i):
-        return self.atoms[i].GetResTitle()
-
-    def get_residues(self, resname=False):
-        ''' Returns the dictionary of residues.
-            If resname is specified, only the residues of that type are 
-            included, e.g. get_residues(resname='HIS') will return the
-            dictionary of histidines. '''
+    def get_residues(self, what='all', listik=False, *args, **kwargs):
+        ''' Returns the dictionary of residues.  Atom selection is the
+            same as in atom_lister method. Notice that residues will be 
+            completed in case your atom selection is partial for a
+            particular residue.
+        '''
+        atoms = self.atom_getter(listik=self.ListCompleteResidues(self.atom_lister(what, listik, *args, **kwargs)))
         residues = {}
-        for atom in self.atoms:
-            if resname:
-                if atom.get_res_name()!=resname:
-                    continue
-            resid = atom.GetResID()
+        for atom in atoms:
+            resid = atom.resid()
             if resid not in residues.keys():
                 residues[resid] = [atom]
             else:
                 residues[resid].append(atom)
-        for resid in residues.keys():
-            residues[resid] = pdbresidue(residues[resid])
-        return residues
-
-    def GetResiduesFromList(self, listik):
-        residues = {}
-        for atom in self.atoms:
-            resid = atom.GetResID()
-            if resid in listik:
-                if resid not in residues.keys():
-                    residues[resid] = [atom]
-                else:
-                    residues[resid].append(atom)
-        for resid in residues.keys():
-            residues[resid] = pdbresidue(residues[resid])
-        return residues
-
-    def GetProteinResidues(self):
-        residues = {}
-        for atom in self.atoms:
-            resid, resname = atom.GetResID(), atom.get_res_name()
-            if pdbnames.Is3Amino(resname):
-                if resid not in residues.keys():
-                    residues[resid] = [atom]
-                else:
-                    residues[resid].append(atom)
-        for resid in residues.keys():
-            residues[resid] = pdbresidue(residues[resid])
-        return residues
-
-    def GetResidue(self, resid):
-        ''' Returns residue class for the group of atoms with resid.  If resid is
-            malformed (e.g. such residue is not found in the molecule), returns None. '''
-        atoms = []
-        for atom in self.atoms:
-            if atom.GetResID() == resid:
-                atoms.append(atom)
-        if atoms:
-            return pdbresidue(atoms)
-        else:
-            return None
+        return dict([(resid,pdbresidue(ratoms)) for resid,ratoms in residues.items()])
 
     def GetResidueNames(self, listik=False):
-        return sorted(set(map(lambda i : self.atoms[i].get_res_name(), self.__ensure_listik_(listik))))
+        return sorted(set([a.get_res_name() for a in self.__ensure_atoms_(listik)]))
 
     def GetChains(self):
         ''' Returns the dictionary of chains with chain IDs as keys and
             number of atoms in each chain as values. '''
-        chains = {}
-        for atom in self.atoms:
-            chid = atom.GetChain()
-            try:
-                chains[chid] += 1
-            except KeyError:
-                chains[chid] = 1
-        return chains
+        return Counter([a.chainID() for a in self.atom_getter()])
 
-    def __headwrite_(self, fout, header):
-        tyhe = type(header)
-        if tyhe is str:
-            fout.write(header)
-        elif tyhe is list or tyhe is tuple:
-            for line in header:
-                fout.write(line)
-            if not header:
-                fout.write(self.GetCrystLine())
+    def __headwrite_(self, fout, header=None):
+        if header is None:
+            fout.write(self.GetCrystLine())
+        else:
+            tyhe = type(header)
+            if tyhe is str:
+                fout.write(header)
+            elif tyhe is list or tyhe is tuple:
+                for line in header:
+                    fout.write(line)
 
     def writePDB(self, pdbFile, header=None, mode='w'):
-        ''' Write the PDB file.  pdbFile is the path to the output file, header may contain
-            single line, list or tuple  of lines which will be placed at the beginning of the file.''' 
-        fout = open(pdbFile, mode)
-        if header == 'cell':
-            self.__headwrite_(fout, self.GetCrystLine())
-        else:
+        ''' Write the PDB file.  pdbFile is the path to the output file,
+            header may contain single line, list or tuple  of lines 
+            which will be placed at the beginning of the file.
+        ''' 
+        with open(pdbFile, mode) as fout:
             self.__headwrite_(fout, header)
-        for atom in self.atoms:
-            fout.write(atom.GetAtomRecord())
-            fout.write(atom.GetAnisouRecord())
-        fout.close()
-
-    def writePDBwithCell(self, pdbFile):
-        ''' Write the PDB file and include the CRYST1 record of the unit cell parameters.
-            pdbFile is the path to the output file.'''
-        self.writePDB(pdbFile, self.GetCrystLine())
+            for atom in self.atoms:
+                fout.write(atom.GetAtomRecord())
+                fout.write(atom.GetAnisouRecord())
+            fout.write('END   \n')
 
     def writePDBchains(self, pdbFile, chains, header=None):
         ''' Write the PDB file that only include the specified chains.
             pdbFile is the path to the output file. chains could be either
             a list or a string with selection chain IDs.'''
-        fout = open(pdbFile, 'w')
-        if header == 'cell':
-            self.__headwrite_(fout, self.GetCrystLine())
-        else:
+        with open(pdbFile, 'w') as fout:
             self.__headwrite_(fout, header)
-        for atom in self.atoms:
-            if atom.GetChain() in chains:
+            for atom in self.atom_getter('chids', chids=chains):
                 fout.write(atom.GetAtomRecord())
-        fout.close()
+                fout.write(atom.GetAnisouRecord())
+            fout.write('END   \n')
 
     def extract_range(self, ranges):
         ''' Returns the copy of the molecule that only contains atoms from
@@ -1921,10 +1825,7 @@ class pdbmolecule:
         ''' Returns the copy of the molecule that only contains atoms from
             the supplied list of chains (the latter could be either list or
             string of symbols. '''
-        extracted_atoms = []
-        for atom in self.atoms:
-            if atom.GetChain() in chains:
-                extracted_atoms.append(atom.copy())
+        extracted_atoms = [a.copy() for a in self.atom_getter('chids', chids=chains)]
         return pdbmolecule(atoms=extracted_atoms, cell=self.cell)
 
     def rename_chains(self, chains):
@@ -1937,7 +1838,6 @@ class pdbmolecule:
     def noise(self, xnoise=0.1, bnoise=0.1, occnoise=0.0):
         for atom in self.atoms:
             atom.xyz = atom.xyz+xnoise*randn(3)
-#            (atom.x, atom.y, atom.z) = atom.xyz #remove
             atom.SetB(math.fabs(atom.GetB()*random.gauss(1,bnoise)))
             if atom.IsAnisotropic():
                 atom.SetUijValues(tuple((array(atom.GetUijValues())*abs(1.0+bnoise*randn(6))).astype(int)))
@@ -1954,7 +1854,7 @@ class pdbmolecule:
     def PhiPsiList(self):
         return backbone(self).PhiPsiList()
         reslist = self.resid_lister('protein')
-        residues = self.GetProteinResidues()
+        residues = self.get_residues('protein')
         phi, psi = {}, {}
         for (i,resid) in enumerate(reslist):
             try:
@@ -1972,7 +1872,7 @@ class pdbmolecule:
 
     def BackboneTorsions(self):
         reslist = self.resid_lister('protein')
-        residues = self.GetProteinResidues()
+        residues = self.get_residues('protein')
         phi, psi, omega = {}, {}, {}
         for (i,resid) in enumerate(reslist):
             try:
@@ -2165,7 +2065,7 @@ class pdbmolecule:
 
     def ChiList(self):
         chis = {}
-        for residue in self.GetProteinResidues().values():
+        for residue in self.get_residues('protein').values():
             chichi = residue.GetChis()
             for chi in chichi.keys():
                 if not chichi[chi]:
@@ -2212,7 +2112,7 @@ class pdbmolecule:
     def get_occupancy_estimates(self):
         occs = {}
         for resid in self.ListAltResidues():
-            occs[resid] = self.GetResidue(resid).esitimate_ac_occupancies()
+            occs[resid] = self.get_residues('resid',resid=resid)[resid].esitimate_ac_occupancies()
         return occs
 
     def print_occupancy_estimates(self):
@@ -2229,7 +2129,7 @@ class backbone:
     Protein backbone atoms manipulation.
     '''
     def __init__(self, molecule):
-        residues = molecule.GetProteinResidues()
+        residues = molecule.get_residues('protein')
         self.segments = []
         self.residues = residues
         self.protons = {}

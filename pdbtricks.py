@@ -136,7 +136,7 @@ for whatoprint in args.outprint:
     elif whatoprint == 'hbonds':
         pass
     elif whatoprint == 'resgem':
-        residue = model.GetResidue(args.resid)
+        residue = model.get_residues('resid',resid=args.resid)[args.resid]
         b,a,t,m = residue.BondsAnglesTorsions(printout=True)
         print 'Residue %s (%s)' % (args.resid, residue.get_res_name())
         print '----------- Bonds ----------- '
@@ -159,15 +159,15 @@ if len(args.action) > 1:
 for whatodo in args.action:
     if whatodo == 'extract-chains':
         if args.chids:
-            model.writePDBchains(args.outpath, args.chids, 'cell')
+            model.writePDBchains(args.outpath, args.chids)
         else:
             print 'This does not compute - extract chains but no chains listed?'
     elif whatodo == 'rjust-resid':
         model.rjust_res_names()
-        model.writePDBwithCell(args.outpath)
+        model.writePDB(args.outpath)
     elif whatodo == 'extract-ranges':
         if ranges:
-            model.extract_range(ranges).writePDBwithCell(args.outpath)
+            model.extract_range(ranges).writePDB(args.outpath)
         else:
             print 'This does not compute - extract but no ranges listed?'
     elif whatodo == 'tinertia-ranges':
