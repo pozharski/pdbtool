@@ -104,7 +104,7 @@ class AtomContact:
                 self._aconts[key] = filter(lambda x : not self._model.same_residue(x[0], x[1]), self._aconts[key])
     def store_lists(self, listik1, listik2, key, rcutoff=4.0, sameres=False):
         if key not in self._aconts:
-            self._aconts[key] = self._model.IndexContacts(listik1, listik2, rmax=rcutoff)
+            self._aconts[key] = list(self._model.IndexContacts(listik1, listik2, rmax=rcutoff))
             if not sameres:
                 self._aconts[key] = filter(lambda x : not self._model.same_residue(x[0], x[1]), self._aconts[key])
     def report(self):

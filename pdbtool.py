@@ -721,6 +721,17 @@ class pdbatom:
         return other.xyz-self.xyz
     def distance(self, other):
         return sqrt((self.dr(other)**2).sum())
+    def noise(self, xnoise=0.1, bnoise=0.1, occnoise=0.0):
+        self.xyz += xnoise*randn(3)
+        self.SetB(math.fabs(self.GetB()*random.gauss(1,bnoise)))
+        if self.IsAnisotropic():
+            self.SetUijValues(tuple((array(self.GetUijValues())*abs(1.0+bnoise*randn(6))).astype(int)))
+        atomocc = float(atom.GetOccupancy())
+        if atomocc<1.0 and atomocc>0.0:
+            newocc = random.gauss(atomocc,occnoise)
+            while newocc>1.0 or newocc<0.0:
+                newocc = random.gauss(atomocc,occnoise)
+            self.SetOccupancy(newocc)
 
 class single_pdbatom(pdbatom):
 
@@ -782,12 +793,12 @@ class pdbmolecule:
         for atom in self.atoms:
             atom.rjust_res_name()
 
-    def prime_uij(self, overwrite=False, listik=None):
-        ''' Initializes the anisotropik ADP for the atoms in listik (default
-            is all the atoms in the molecule).  The overwrite flag defines if
-            the ANISOU record will be overwritten if already persent.'''
-        for atomi in listik if listik else range(self.GetAtomNumber()):
-            self.atoms[atomi].prime_uij(overwrite=overwrite)
+    def prime_uij(self, overwrite=False, what='all', listik=False, *args, **kwargs):
+        ''' Initializes anisotropic ADPs.  The overwrite flag defines if
+            the ANISOU record will be overwritten if already persent.
+            Selection syntax the same as in atom_lister method.'''
+        for atom in self.atom_getter(what, listik, *args, **kwargs):
+            atom.prime_uij(overwrite=overwrite)
 
     def GetSpaceGroup(self):
         if self.cell:
@@ -803,35 +814,33 @@ class pdbmolecule:
         for atom in self.atoms:
             atom.SetB(b)
 
-    def SetBfactorValues(self, bvalues, listik=None):
-        ''' Sets the atomic B-factors using the provided values mapped into the
-            list of atoms. If bvalues is a single number, all the atoms
-            in the list will have the same B-factor.  If listik is not
-            supplied, all atoms will have their B-factors reset. '''
-        if not listik:
-            listik = range(self.GetAtomNumber())
+    def SetBfactorValues(self, bvalues, what='all', listik=False, *args, **kwargs):
+        ''' Sets the atomic B-factors using the provided values mapped 
+            into the list of atoms. If bvalues is a single number, all 
+            the atoms in the list will have the same B-factor.  
+            Selection syntax the same as in atom_lister method. '''
         if type(bvalues) == float:
-            for atomi in listik:
-                self.atoms[atomi].SetB(bvalues)
+            for atom in self.atom_getter(what, listik, *args, **kwargs):
+                atom.SetB(bvalues)
         else:
-            assert len(bvalues)==len(listik), 'Shape mismatch between selection and Bvalues vector.'
-            for (i, atomi) in enumerate(listik):
-                self.atoms[atomi].SetB(bvalues[i])
+            atoms = self.atom_getter(what, listik, *args, **kwargs)
+            assert len(bvalues)==len(atoms), 'Shape mismatch between selection and Bvalues vector.'
+            for (i, atom) in enumerate(atoms):
+                atom.SetB(bvalues[i])
 
-    def set_occupancies(self, values, listik=None):
-        ''' Sets the atomic occupancies using the provided values mapped into 
-            the list of atoms.  If values is a single number, all the atoms
-            in the list will have the same occupancy.  If listik is not
-            supplied, all atoms will have their occupancies reset. '''
-        if not listik:
-            listik = range(self.GetAtomNumber())
+    def set_occupancies(self, values, what='all', listik=False, *args, **kwargs):
+        ''' Sets the atomic occupancies using the provided values mapped
+            into  the list of atoms.  If values is a single number, all 
+            the atoms in the list will have the same occupancy.  
+            Selection syntax the same as in atom_lister method. '''
         if type(values) == float:
-            for atomi in listik:
-                self.atoms[atomi].SetOccupancy(values)
+            for atom in self.atom_getter(what, listik, *args, **kwargs):
+                atom.SetOccupancy(values)
         else:
-            assert len(values)==len(listik), 'Shape mismatch between selection and values vector.'
-            for (i, atomi) in enumerate(listik):
-                self.atoms[atomi].SetOccupancy(values[i])
+            atoms = self.atom_getter(what, listik, *args, **kwargs)
+            assert len(values)==len(atoms), 'Shape mismatch between selection and values vector.'
+            for (i, atom) in enumerate(atoms):
+                atom.SetOccupancy(values[i])
 
     def PopAtom(self, atomi):
         ''' Return the atom and delete it from the molecule.  Use with caution. '''
@@ -1007,19 +1016,11 @@ class pdbmolecule:
         '''
         return pdbmolecule(atoms=self.atom_getter(what, listik, *args, **kwargs), cell=self.cell)
 
-    def get_elements(self, listik=None):
-        if listik is None:
-            listik = self.atom_lister()
-        elif type(listik) == str:
-            listik = self.atom_lister(listik)
-        return sorted(set([a.GetName() for a in self.GetListedAtoms(listik)]))
+    def get_elements(self, what='all', listik=False, *args, **kwargs):
+        return sorted(set([a.element() for a in self.atom_getter(what, listik, *args, **kwargs)]))
 
-    def get_atom_types(self, listik=None):
-        if listik is None:
-            listik = self.atom_lister()
-        elif type(listik) == str:
-            listik = self.atom_lister(listik)
-        return sorted(set([a.GetName() for a in self.GetListedAtoms(listik)]))
+    def get_atom_types(self, what='all', listik=False, *args, **kwargs):
+        return sorted(set([a.name() for a in self.atom_getter(what, listik, *args, **kwargs)]))
 
 # --- "GetAtomSomething" methods ---
 
@@ -1098,13 +1099,10 @@ class pdbmolecule:
 
 # --- Get various  vectors
 
-    def GetBvector(self, listik=None):
+    def GetBvector(self, what='all', listik=False, *args, **kwargs):
         ''' Returns an array of B-factor values for a list of atoms.
             Defaults to all atoms in the molecule. '''
-        if not listik:
-            return array([x.GetB() for x in self.atoms])
-        else:
-            return array([x.GetB() for x in array(self.atoms)[listik]])
+        return array([a.tempFactor() for a in self.atom_getter(what, listik, *args, **kwargs)])
 
     def GetResidueBvector(self, mode='lin'):
         bs = []
@@ -1471,7 +1469,7 @@ class pdbmolecule:
         return dict([(chid,self.GetListAverageB(chind)) for (chid,chind) in self.ListChainSplit(self.atom_lister(what, listik, *args, **kwargs)).items()])
 
     def GetListAverageB(self, listik):
-        bvals = self.GetBvector(listik)
+        bvals = self.GetBvector(listik=listik)
         ovals = self.GetOccupancyVector(listik)
         return sum(bvals*ovals)/sum(ovals)
 
@@ -1546,8 +1544,8 @@ class pdbmolecule:
         N0, N1 = self.GetAtomNumber(), other.GetAtomNumber()
         return sqrt(array((matrix(xyz1.T[0]).T*ones(N0)).T-matrix(xyz0.T[0]).T*ones(N1))**2 + array((matrix(xyz1.T[1]).T*ones(N0)).T-matrix(xyz0.T[1]).T*ones(N1))**2 + array((matrix(xyz1.T[2]).T*ones(N0)).T-matrix(xyz0.T[2]).T*ones(N1))**2).min(1)
 
-    def Distances2Bfactors(self, other, listik=None):
-        self.SetBfactorValues(bvalues=self.ShortestDistances(other), listik=listik)
+    def Distances2Bfactors(self, other):
+        self.SetBfactorValues(bvalues=self.ShortestDistances(other))
 
     def SymNeighbors(self, cutoff=4.0, celldepth=1, verbose=False):
         self.__CellCheck_()
@@ -1837,70 +1835,19 @@ class pdbmolecule:
 
     def noise(self, xnoise=0.1, bnoise=0.1, occnoise=0.0):
         for atom in self.atoms:
-            atom.xyz = atom.xyz+xnoise*randn(3)
-            atom.SetB(math.fabs(atom.GetB()*random.gauss(1,bnoise)))
-            if atom.IsAnisotropic():
-                atom.SetUijValues(tuple((array(atom.GetUijValues())*abs(1.0+bnoise*randn(6))).astype(int)))
-            atomocc = float(atom.GetOccupancy())
-            if atomocc<1.0 and atomocc>0.0:
-                newocc = random.gauss(atomocc,occnoise)
-                while newocc>1.0 or newocc<0.0:
-                    newocc = random.gauss(atomocc,occnoise)
-                atom.SetOccupancy(newocc)
+            atom.noise(xnoise, bnoise, occnoise)
 
     def copy(self):
         return copy.deepcopy(self)
 
     def PhiPsiList(self):
         return backbone(self).PhiPsiList()
-        reslist = self.resid_lister('protein')
-        residues = self.get_residues('protein')
-        phi, psi = {}, {}
-        for (i,resid) in enumerate(reslist):
-            try:
-                if i:
-                    previd = reslist[i-1]
-                    if distance(residues[resid].GetAtom('N'),residues[previd].GetAtom('C')) < 2.5:
-                        phi[resid] = torsion(residues[previd].GetAtom('C'), residues[resid].GetAtom('N'), residues[resid].GetAtom('CA'), residues[resid].GetAtom('C'))
-                nextid = reslist[i+1]
-                psi[resid] = torsion(residues[resid].GetAtom('N'), residues[resid].GetAtom('CA'), residues[resid].GetAtom('C'), residues[nextid].GetAtom('N'))
-            except (KeyError, IndexError):
-                logging.info('No peptide bond atoms for ' + resid)
-            finally:
-                pass
-        return (phi, psi)
 
     def BackboneTorsions(self):
-        reslist = self.resid_lister('protein')
-        residues = self.get_residues('protein')
-        phi, psi, omega = {}, {}, {}
-        for (i,resid) in enumerate(reslist):
-            try:
-                if i:
-                    previd = reslist[i-1]
-                    if distance(residues[resid].GetAtom('N'),residues[previd].GetAtom('C')) < 2.5:
-                        phi[resid] = torsion(residues[previd].GetAtom('C'), residues[resid].GetAtom('N'), residues[resid].GetAtom('CA'), residues[resid].GetAtom('C'))
-                nextid = reslist[i+1]
-                psi[resid] = torsion(residues[resid].GetAtom('N'), residues[resid].GetAtom('CA'), residues[resid].GetAtom('C'), residues[nextid].GetAtom('N'))
-                if distance(residues[resid].GetAtom('C'),residues[nextid].GetAtom('N')) < 2.5:
-                    omega[resid] = torsion(residues[resid].GetAtom('O'), residues[resid].GetAtom('C'), residues[nextid].GetAtom('N'), residues[nextid].GetAtom('CA'))
-            except (KeyError, IndexError):
-                logging.info('No peptide bond atoms for ' + resid)
-            finally:
-                pass
-        return (phi, psi, omega)
-
-    def GetWaters(self):
-        ''' Return the dictionary of waters as residues.'''
-        waters = {}
-        residues = self.get_residues()
-        for resid in residues:
-            if residues[resid].get_res_name() == 'HOH':
-                waters[resid] = residues[resid]
-        return waters
+        return backbone(self).BackboneTorsions()
 
     def W2Wdistance(self, water1, water2):
-        return distance(water1.GetAtom('O'),water2.GetAtom('O'))
+        return water1.GetAtom('O').distance(water2.GetAtom('O'))
 
     def PolarContacts(self, rmax=3.2, include_interchain=True):
         ''' 
@@ -1909,18 +1856,7 @@ class pdbmolecule:
             contacts (say if you are not intersted in crystal contacts of a
             confirmed monomer) if include_interchain is set to false.
         '''
-        indp = self.atom_lister('polar')
-        contacts = []
-        for (i,atomi) in enumerate(indp):
-            resid = self.GetAtomResID(atomi)
-            d = self.IndexDistances([atomi],indp[(i+1):])
-            for (j,atomj) in enumerate(indp[(i+1):]):
-                if d[0][j] < rmax:
-                    if self.GetAtomResID(atomj) != resid:
-                        if self.GetAtom(atomi).same_alt(self.GetAtom(atomj)):
-                            if include_interchain or self.GetAtom(atomi).same_chain(self.GetAtom(atomj)):
-                                contacts.append((atomi, atomj, d[0][j]))
-        return contacts
+        return self.AllContacts(rmax, self.atom_lister('polar')) 
 
     def AllContacts(self, rmax=4.0, listik=False):
         '''
@@ -1958,78 +1894,6 @@ class pdbmolecule:
     def NeighborDatabase(self):
         return backbone(self).NeighborDatabase()
 
-    def HydrogenBonds(self, rmax=3.2, list_info=False, ndb=None):
-        if not ndb:
-            ndb = backbone(self).NeighborDatabase()
-        bonds = self.PolarContacts(rmax)
-        mchb = self.BackboneHbonds()
-        poplist = []
-        for (i, (i1, i2, d)) in enumerate(bonds):
-            flag = False
-            resid1, resid2 = self.GetAtomResID(i1), self.GetAtomResID(i2)
-            name1, name2 = self.GetAtom(i1).GetName(), self.GetAtom(i2).GetName()
-            try:
-                if resid1 in ndb[resid2]:
-                    flag = True
-                elif name1=='N' and name2=='O':
-                    if resid1 in mchb:
-                        if mchb[resid1][0]!=resid2:
-                            flag = True
-                elif name2=='N' and name1=='O':
-                    if resid2 in mchb:
-                        if mchb[resid2][0]!=resid1:
-                            flag = True
-            except KeyError:
-                pass
-            if not flag:
-                res1, res2 = self.GetAtom(i1).get_res_name(), self.GetAtom(i2).get_res_name()
-                flag = True
-                try:
-                    if pdbnames.MayHBond(res1,name1,res2,name2):
-                        flag = False
-                except KeyError:
-                    flag = False
-            if flag:
-                poplist.append(i)
-        for i in poplist[::-1]:
-            del bonds[i]
-        if list_info:
-            infobonds = []
-            for (a1, a2, d) in bonds:
-                atom1, atom2 = self.GetAtomTitle(a1), self.GetAtomTitle(a2)
-                infobonds.append((atom1[:8].strip(),atom1[8:].strip(),atom2[:8].strip(),atom2[8:].strip()))
-            return infobonds
-        else:
-            return bonds
-
-    def CACAdistances(self):
-        ind = self.atom_lister('name_CA')
-        resids, d = [], []
-        for (i,atomi) in enumerate(ind):
-            d.append([])
-            resids.append(self.get_atom_alt_resid(atomi).replace(' ',''))
-            for (j,atomj) in enumerate(ind):
-                if j<i:
-                    d[i].append(d[j][i])
-                elif j==i:
-                    d[i].append(0.0)
-                else:
-                    d[i].append(self.distance(atomi,atomj))
-        return (resids, d)
-
-    def ABdistances(self, nameA, nameB):
-        indA = self.atom_lister('name_'+nameA)
-        indB = self.atom_lister('name_'+nameB)
-        resids, d = [[],[]], []
-        for (i,atomi) in enumerate(indA):
-            d.append([])
-            resids[0].append(self.GetAtomResID(atomi))
-            for (j,atomj) in enumerate(indB):
-                d[i].append(self.distance(atomi,atomj))
-        for atom in indB:
-            resids[1].append(self.GetAtomResID(atom))
-        return (resids, d)
-
     def IndexDistances(self, indA, indB):
         d = []
         for atomi in indA:
@@ -2038,36 +1902,11 @@ class pdbmolecule:
                 d[-1].append(self.distance(atomi,atomj))
         return d
 
-    def IsProteinAtom(self,i):
-        return pdbnames.Is3Amino(self.GetAtomResidueName(i))
-
-    def IsProteinBackboneAtom(self, i):
-        return self.atoms[i].IsProteinBackbone()
-
-    def IsProteinSideChainAtom(self, i):
-        return self.atoms[i].IsProteinSidechain()
-
-    def IsBackboneAtom(self, i):
-        return self.atoms[i].IsBackbone()
-
-    def IsSideChainAtom(self, i):
-        return self.atoms[i].IsSidechain()
-
-    def IsHeteroAtom(self,i):
-        return pdbnames.IsHetero(self.GetAtomResidueName(i))
-
-    def IsWater(self, i):
-        return pdbnames.IsWater(self.GetAtomResidueName(i))
-
-    def BackboneHbonds(self):
-        bb=backbone(self)
-        return bb.MChbonds()
-
     def ChiList(self):
         chis = {}
         for residue in self.get_residues('protein').values():
             chichi = residue.GetChis()
-            for chi in chichi.keys():
+            for chi in list(chichi.keys()):
                 if not chichi[chi]:
                     chichi.pop(chi)
             if chichi:
@@ -2075,7 +1914,7 @@ class pdbmolecule:
             if residue.HasAltConf():
                 for ac in residue.GetAltCodes()[1:]:
                     chichi = residue.GetAltChis(ac)
-                    for chi in chichi.keys():
+                    for chi in list(chichi.keys()):
                         if not chichi[chi]:
                             chichi.pop(chi)
                 if chichi:
@@ -2087,33 +1926,11 @@ class pdbmolecule:
             residue.Baverage()
 
     def GetBlimits(self):
-        b = []
-        for atom in self.atoms:
-            b.append(atom.GetB())
+        b = [a.GetB() for a in self.atoms]
         return (min(b),max(b))
 
-    def resid_compare(self, resid1, resid2):
-        chid = cmp(resid1[0], resid2[0])
-        if chid:
-            return chid
-        try:
-            resn1 = int(resid1[1:])
-        except ValueError:
-            resn1 = int(resid1[1:-1])
-        try:
-            resn2 = int(resid2[1:])
-        except ValueError:
-            resn2 = int(resid2[1:-1])
-        resnum = cmp(resn1,resn2)
-        if resnum:
-            return resnum
-        return cmp(resid1,resid2)
-
     def get_occupancy_estimates(self):
-        occs = {}
-        for resid in self.ListAltResidues():
-            occs[resid] = self.get_residues('resid',resid=resid)[resid].esitimate_ac_occupancies()
-        return occs
+        return dict([(resid,self.get_residues('resid',resid=resid)[resid].esitimate_ac_occupancies()) for resid in self.ListAltResidues()])
 
     def print_occupancy_estimates(self):
         occs = self.get_occupancy_estimates()
@@ -2121,8 +1938,7 @@ class pdbmolecule:
             print(resid + ' %5.2f'*len(occs[resid]) % tuple(occs[resid]))
 
     def xyz(self, listik=False):
-        listik = self.__ensure_listik_(listik)
-        return array(map(lambda x : x.GetR(), self.atom_getter('all', listik)))
+        return array([a.GetR() for a in self.atom_getter(listik=listik)])
 
 class backbone:
     '''
@@ -2326,7 +2142,7 @@ class backbone:
             return (dd, self.GetSegment(Segment1))
         elif returnType==2:
             dd = []
-            dzip = zip(*d)
+            dzip = list(zip(*d))
             for i in range(len(dzip)):
                 dd.append(min(dzip[i]))
             return (dd,self.GetSegment(Segment2))
@@ -2369,6 +2185,41 @@ class backbone:
                 else:
                     logging.info('Missing atoms in \''+residue.GetResID()+'\' - no phi angle calculated')
         return (phi, psi)
+
+    def BackboneTorsions(self):
+        phi, psi, omega = {}, {}, {}
+        for segment in self.segments:
+            if len(segment) > 1:
+                residue = segment[0]
+                n, ca, c, o, n_, ca_ = (residue.GetAtom('N'), residue.GetAtom('CA'), residue.GetAtom('C'), residue.GetAtom('O'), segment[1].GetAtom('N'), segment[1].GetAtom('CA'))
+                if n and ca and c and n_:
+                    psi[residue.GetResID()] = torsion(n, ca, c, n_)
+                else:
+                    logging.info('Missing atoms in \''+residue.GetResID()+'\' - no psi angle calculated')
+                if o and c and n_ and ca_:
+                    omega[residue.GetResID()] = torsion(o, c, n_, ca_)
+                for (i,residue) in enumerate(segment[1:-1]):
+                    resid = residue.GetResID()
+                    (c_, n, ca, c, o, n_, ca_) =  (segment[i].GetAtom('C'), residue.GetAtom('N'), residue.GetAtom('CA'), residue.GetAtom('C'), residue.GetAtom('O'), segment[i+2].GetAtom('N'), segment[i+2].GetAtom('CA'))
+                    if c_ and n and ca and c:
+                        phi[resid] = torsion(c_, n, ca, c)
+                    else:
+                        logging.info('Missing atoms in \''+resid+'\' - no phi angle calculated')
+                    if n and ca and c and n_:
+                        psi[resid] = torsion(n, ca, c, n_)
+                    else:
+                        logging.info('Missing atoms in \''+resid+'\' - no psi angle calculated')
+                    if o and c and n_ and ca_:
+                        omega[resid] = torsion(o, c, n_, ca_)
+                    else:
+                        logging.info('Missing atoms in \''+resid+'\' - no omega angle calculated')
+                residue = segment[-1]
+                (c_, n, ca, c) =  (segment[-2].GetAtom('C'), residue.GetAtom('N'), residue.GetAtom('CA'), residue.GetAtom('C'))
+                if c_ and n and ca and c:
+                    phi[residue.GetResID()] = torsion(c_, n, ca, c)
+                else:
+                    logging.info('Missing atoms in \''+residue.GetResID()+'\' - no phi angle calculated')
+        return (phi, psi, omega)
 
     def NeighborDatabase(self):
         ndb = {}
@@ -2437,8 +2288,8 @@ class pdbresidue:
 
     def matchAlt2Alt(self, other):
         a = self.rmsdAlt(other)
-        ind1 = range(len(self.altcodes))
-        ind2 = range(len(other.altcodes))
+        ind1 = list(range(len(self.altcodes)))
+        ind2 = list(range(len(other.altcodes)))
         matchlist = []
         while ind1 or ind2:
             i = ind1[a[ind1,ind2].squeeze().min(-1).argmin()]
@@ -2529,7 +2380,7 @@ class pdbresidue:
             chis['chi72'] = self.GetChi(('CZ$','OH$','^P$','O2P$'))
             chis['chi73'] = self.GetChi(('CZ$','OH$','^P$','O3P$'))
         if purge:
-            keys = chis.keys()
+            keys = list(chis.keys())
             for key in keys:
                 if not chis[key]:
                     del chis[key]
@@ -2596,21 +2447,12 @@ class pdbresidue:
         return chi
 
     def GetMaskAtoms(self, mask):
-        atoms = []
-        for name in self.atoms.keys():
-            if re.match(mask,name):
-                atoms.append(self.atoms[name])
-        return atoms
+        return [self.atoms[name] for name in self.atoms.keys() if re.match(mask,name)]
 
     def GetMaskAltAtoms(self, mask, code):
-        atoms, ac = [], self.altcodes.index(code)
-        for name in self.altatoms[ac].keys():
-            if re.match(mask,name):
-                atoms.append(self.altatoms[ac][name])
-        if atoms:
-            return atoms
-        else:
-            return self.GetMaskAtoms(mask)
+        ac = self.altcodes.index(code)
+        atoms = [self.altatoms[ac][name] for name in self.altatoms[ac].keys() if re.match(mask,name)]
+        return atoms if atoms else self.GetMaskAtoms(mask)
 
     def GetAtom(self, name):
         try:
@@ -2619,12 +2461,12 @@ class pdbresidue:
             return None
 
     def GetAtoms(self):
-        return self.atoms.values()
+        return list(self.atoms.values())
 
     def get_atom_names(self):
         ''' Return the list of atom names in the residue, sorted in 
             random order. '''
-        return self.atoms.keys()
+        return list(self.atoms.keys())
 
     def get_atom_names_sorted(self):
         ''' Return the list of atom names in the residue, sorted alphabetically.
@@ -2763,9 +2605,9 @@ class pdbresidue:
             mean square, which can be useful if the B-factor column is used to
             carry some other parameter that needs to be averaged this way.
             Averaging is occupancy-weighted.'''
-        b = array(map(lambda x : x.GetB(), self.origatoms))
-        o = array(map(lambda x : x.GetOccupancy(), self.origatoms))
-        f = array(map(lambda x : x.IsBackbone(), self.origatoms)).astype(int)
+        b = array([x.GetB() for x in self.origatoms])
+        o = array([x.GetOccupancy() for x in self.origatoms])
+        f = array([x.IsBackbone() for x in self.origatoms]).astype(int)
         if mode == 'lin':
             return [sum(b*o)/sum(o),sum(b*f*o)/sum(f*o),sum(b*(1-f)*o)/sum((1-f)*o)]
         elif mode == 'rms':
@@ -2834,9 +2676,9 @@ class pdbresidue:
             problem since single residue does not contain many atoms.  For massive
             calculations, use pbdmolecule.IndexDistances() method instead. '''
         if not names1:
-            names1 = self.atoms.keys()
+            names1 = list(self.atoms.keys())
         if not names2:
-            names2 = self.atoms.keys()
+            names2 = list(self.atoms.keys())
         R = {}
         for name in names1:
             Ri = self.Ri(name,names2)
@@ -2874,7 +2716,7 @@ class pdbresidue:
         carboxylates = []
         for key in cb:
             if len(cb[key]) == 2:
-                oxys = cb[key].keys()
+                oxys = list(cb[key].keys())
                 if len(ob[oxys[0]]) == 1 and len(ob[oxys[1]]) == 1:
                     carboxylates.append((key, oxys[0], oxys[1]))
         return carboxylates
@@ -2914,41 +2756,27 @@ class pdbresidue:
             self.SetAtomR('ND1', cd2)
             self.SetAtomR('CE1', ne2)
             self.SetAtomR('NE2', ce1)
+    def __pairlist_(self, N):
+        x = [[(i,j) for j in range(i+1,N)] for i in range(N-1)]
+        return array([item for sublist in x for item in sublist])
     def BondsAnglesTorsions(self, Rcutoff=2.0, printout=False):
         Nats = len(self.origatoms)
-        ps = array(reduce(lambda x,y: x+y, [[(k,i) for i in range(k+1,Nats)] for k in range(Nats)]))
-        ds = array(map(lambda x : self.distance(x[0],x[1]), ps))
+        ps = self.__pairlist_(Nats)
+        ds = array([self.distance(x[0],x[1]) for x in ps])
         bonds = ps[ds<Rcutoff]
         Nbs = len(bonds)
-        ps = array(reduce(lambda x,y: x+y, [[(k,i) for i in range(k+1,Nbs)] for k in range(Nbs)]))
-        angles = array(map(lambda x : array(x)[array([x.count(y) for y in x]).argsort()[array([0,2,1])]].tolist(), filter(lambda x : len(set(x))==3, map(lambda x : bonds[x[0]].tolist()+bonds[x[1]].tolist(), ps))))
+        ps = self.__pairlist_(Nbs)
+        angles = array([array(x)[array([x.count(y) for y in x]).argsort()[array([0,2,1])]].tolist() for x in [x for x in [bonds[x[0]].tolist()+bonds[x[1]].tolist() for x in ps] if len(set(x))==3]])
         Nas = len(angles)
-        ps = array(reduce(lambda x,y: x+y, [[(k,i) for i in range(k+1,Nas)] for k in range(Nas)]))
-        torsions = array(map(lambda x : x[:4] if x.tolist().count(x[-1])==2 else x[:3].tolist()+[x[-1]], array(map(lambda x : x[:3][::-1].tolist()+x[3:].tolist() if x.tolist().count(x[0])==2 else x,filter(lambda x : x[1]!=x[4], array(filter(lambda x : len(set(x))==4, map(lambda x : angles[x[0]].tolist()+angles[x[1]].tolist(), ps))))))))
-        impropers = array(list(set(map(lambda x : (x[1],x[0],x[2],x[3]), map(lambda x : [x[1]]+sorted(set(x)-set([x[1]])), filter(lambda x : x[1]==x[4], filter(lambda x : len(set(x))==4, map(lambda x : angles[x[0]].tolist()+angles[x[1]].tolist(), ps))))))))
+        ps = self.__pairlist_(Nas)
+        torsions = array([x[:4] if x.tolist().count(x[-1])==2 else x[:3].tolist()+[x[-1]] for x in array([x[:3][::-1].tolist()+x[3:].tolist() if x.tolist().count(x[0])==2 else x for x in [x for x in array([x for x in [angles[x[0]].tolist()+angles[x[1]].tolist() for x in ps] if len(set(x))==4]) if x[1]!=x[4]]])])
+        impropers = array(list(set([(x[1],x[0],x[2],x[3]) for x in [[x[1]]+sorted(set(x)-set([x[1]])) for x in [x for x in [x for x in [angles[x[0]].tolist()+angles[x[1]].tolist() for x in ps] if len(set(x))==4] if x[1]==x[4]]]])))
         if printout:
-            bonds = map(lambda x : '%5s --- %5s : %10.3f' % (self.origatoms[x[0]].name(), self.origatoms[x[1]].name(), self.distance(x[0],x[1])), bonds)
-            angles = map(lambda x : '%5s - %5s - %5s : %10.2f' % (self.origatoms[x[0]].name(), self.origatoms[x[1]].name(), self.origatoms[x[2]].name(), self.angle(x[0],x[1],x[2])), angles)
-            torsions = map(lambda x : '%5s - %5s - %5s - %5s : %10.2f' % (self.origatoms[x[0]].name(), self.origatoms[x[1]].name(), self.origatoms[x[2]].name(), self.origatoms[x[3]].name(), self.torsion(x[0],x[1],x[2],x[3])), torsions)
-            impropers = map(lambda x : '%5s - %5s - %5s - %5s : %10.2f' % (self.origatoms[x[0]].name(), self.origatoms[x[1]].name(), self.origatoms[x[2]].name(), self.origatoms[x[3]].name(), self.torsion(x[0],x[1],x[2],x[3])), impropers)
+            bonds = ['%5s --- %5s : %10.3f' % (self.origatoms[x[0]].name(), self.origatoms[x[1]].name(), self.distance(x[0],x[1])) for x in bonds]
+            angles = ['%5s - %5s - %5s : %10.2f' % (self.origatoms[x[0]].name(), self.origatoms[x[1]].name(), self.origatoms[x[2]].name(), self.angle(x[0],x[1],x[2])) for x in angles]
+            torsions = ['%5s - %5s - %5s - %5s : %10.2f' % (self.origatoms[x[0]].name(), self.origatoms[x[1]].name(), self.origatoms[x[2]].name(), self.origatoms[x[3]].name(), self.torsion(x[0],x[1],x[2],x[3])) for x in torsions]
+            impropers = ['%5s - %5s - %5s - %5s : %10.2f' % (self.origatoms[x[0]].name(), self.origatoms[x[1]].name(), self.origatoms[x[2]].name(), self.origatoms[x[3]].name(), self.torsion(x[0],x[1],x[2],x[3])) for x in impropers]
         return bonds, angles, torsions, impropers
-#class idatom:
-
-#    def __init__(self, chainid = ' ', resid = 1, atomn = 'CA', altloc = ' ', iCode = ' '):
-#        self.chid = chainid[0]
-#        self.resi = int(resid)
-#        self.name = atomn.strip()
-#        self.altc = altloc
-#        self.icod = iCode
-
-#    def ResID(self):
-#        return self.chid + '%4d' % self.resi + self.icod
-
-#    def GetAtomName(self):
-#        return self.name
-
-#    def GetAltLoc(self):
-#        return self.altc
         
 class RemarkParser:
 
@@ -2974,7 +2802,7 @@ class RemarkParser:
                     pass
 
     def GetKeys(self):
-        return self.remarks.keys()
+        return list(self.remarks.keys())
 
     def GetValue(self, key):
         try:
