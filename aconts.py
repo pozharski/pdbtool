@@ -1,4 +1,4 @@
-from pdbtool import pdbmolecule
+from .pdbtool import pdbmolecule
 from scipy import exp, sqrt, log
 
 DAKERNEL_PARAMS = {
@@ -95,23 +95,23 @@ class AtomContact:
         if userkey:
             key = userkey
         else:
-            key = 'rats_'+reduce(lambda x, y: x+'_'+y, sorted(rats))
+            'rats_'+'_'.join(sorted(rats))
         if key not in self._aconts:
             listik = self._model.atom_lister('rat', rats=rats)
             submol = pdbmolecule(atoms=self._model.atom_getter('all', listik))
-            self._aconts[key] = map(lambda x : (listik[x[0]], listik[x[1]], x[2]), submol.AllContacts(rcutoff))
+            self._aconts[key] = [(listik[x[0]], listik[x[1]], x[2]) for x in submol.AllContacts(rcutoff)]
             if not sameres:
-                self._aconts[key] = filter(lambda x : not self._model.same_residue(x[0], x[1]), self._aconts[key])
+                self._aconts[key] = [x for x in self._aconts[key] if not self._model.same_residue(x[0], x[1])]
     def store_lists(self, listik1, listik2, key, rcutoff=4.0, sameres=False):
         if key not in self._aconts:
             self._aconts[key] = list(self._model.IndexContacts(listik1, listik2, rmax=rcutoff))
             if not sameres:
-                self._aconts[key] = filter(lambda x : not self._model.same_residue(x[0], x[1]), self._aconts[key])
+                self._aconts[key] = [x for x in self._aconts[key] if not self._model.same_residue(x[0], x[1])]
     def report(self):
         for key, value in self._aconts.iteritems():
-            print "%s %5d" % (key, len(value))
+            print("%s %5d" % (key, len(value)))
             for i,j,r in value[:3]:
-                print "%-16s %-16s %.2f " % (self._model.GetAtomTitle(i), self._model.GetAtomTitle(j), r)
+                print("%-16s %-16s %.2f " % (self._model.GetAtomTitle(i), self._model.GetAtomTitle(j), r))
 
 class ACreader(object):
     ''' Reads the report lines produced by contact classes '''
@@ -135,16 +135,16 @@ class ACreader(object):
     def _extra_report(self):
         return ''
 
-from pdbminer import pdbase
+from .pdbminer import pdbase
 class atom_contact_pdbase(pdbase):
     tables = [('atom_contacts', ACreader(), '')]
 
 class HBreader(ACreader):
     def _extra_reads(self, chunks):
         if chunks:
-            self.angle1, self.tor1 = map(float, chunks[7:9])
-            self.angle2, self.tor2 = map(float, chunks[9:11])
-            self.atomi1, self.atomi2 = map(int, chunks[11:13])
+            self.angle1, self.tor1 = [float(x) for x in chunks[7:9]]
+            self.angle2, self.tor2 = [float(x) for x in chunks[9:11]]
+            self.atomi1, self.atomi2 = [int(x) for x in chunks[11:13]]
         else:
             self.angle1, self.tor1, self.angle2, self.tor2 = [float('nan')]*4
             self.atomi1, self.atomi2 = [-1,-1]
@@ -196,7 +196,7 @@ class CysSGtoCysSG(AtomContact):
 class HydrogenBond(AtomContact):
     def report(self):
         for h,g,i,j,k,l,r,angle1,tor1,angle2,tor2 in self._aconts[self.__class__.__name__]:
-            print "%-16s %-16s %8.2f %8.2f %8.2f %8.2f %8.2f" % (self._model.GetAtomTitle(i), self._model.GetAtomTitle(j), r, angle1,tor1,angle2,tor2)
+            print("%-16s %-16s %8.2f %8.2f %8.2f %8.2f %8.2f" % (self._model.GetAtomTitle(i), self._model.GetAtomTitle(j), r, angle1,tor1,angle2,tor2))
     def bond_data(self):
         return  self._aconts[self.__class__.__name__]
     def evalbond(self, atomi, atomj):
@@ -268,17 +268,17 @@ class HydrogenBond(AtomContact):
     def da_pvalue(self, d, a):
         return da_pvalue(self.__class__.__name__, d, a)
     def pfilter(self, p):
-        self._aconts[self.__class__.__name__] = filter(lambda x : self.da_pvalue(x[6],x[7])>p, self._aconts[self.__class__.__name__])
+        self._aconts[self.__class__.__name__] = [x for x in self._aconts[self.__class__.__name__] if self.da_pvalue(x[6],x[7])>p]
     def report_pval(self):
         for h,g,i,j,k,l,r,angle1,tor1,angle2,tor2 in self._aconts[self.__class__.__name__]:
-            print "%-16s %-16s %8.2f %8.2f %8.2f %8.2f" % (self._model.GetAtomTitle(i), self._model.GetAtomTitle(j), r, angle1,tor1,self.da_pvalue(r,angle1))
+            print("%-16s %-16s %8.2f %8.2f %8.2f %8.2f" % (self._model.GetAtomTitle(i), self._model.GetAtomTitle(j), r, angle1,tor1,self.da_pvalue(r,angle1)))
     def get_hbonds(self):
         hbonds = {}
         for h,g,i,j,k,l,r,angle1,tor1,angle2,tor2 in self._aconts[self.__class__.__name__]:
             hbonds[self._model.GetAtomTitle(i)+'-'+self._model.GetAtomTitle(j)] = (i,j,r,angle1,tor1,self.da_pvalue(r,angle1))
         return hbonds
     def get_hbids(self):
-        return map(lambda x : self._model.GetAtomTitle(x[2])+'-'+self._model.GetAtomTitle(x[3]) , self._aconts[self.__class__.__name__])
+        return [self._model.GetAtomTitle(x[2])+'-'+self._model.GetAtomTitle(x[3]) for x in self._aconts[self.__class__.__name__]]
     def conserved_hbonds(self, other):
         return sorted(list(set(self.get_hbids()).intersection(other.get_hbids())))
     def broken_hbonds(self, other):
@@ -289,24 +289,24 @@ class HydrogenBond(AtomContact):
         selfbonds = self.get_hbonds()
         otherbonds = other.get_hbonds()
         hbs = self.conserved_hbonds(other)
-        print "Conserved hydrogen bonds (%d)" % (len(hbs))
+        print("Conserved hydrogen bonds (%d)" % (len(hbs)))
         if len(hbs):
             for name in hbs:
-                print "%-20s %-20s %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f" % tuple(name.split('-') + list(selfbonds[name][2:]) + list(otherbonds[name][2:]))
+                print("%-20s %-20s %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f" % tuple(name.split('-') + list(selfbonds[name][2:]) + list(otherbonds[name][2:])))
         hbs = self.broken_hbonds(other)
-        print "Broken hydrogen bonds (%d)" % (len(hbs))
+        print("Broken hydrogen bonds (%d)" % (len(hbs)))
         if len(hbs):
             for name in hbs:
                 atomi = self._model.GetAtom(selfbonds[name][0])
                 atomj = self._model.GetAtom(selfbonds[name][1])
-                print "%-20s %-20s %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f" % tuple(name.split('-') + list(selfbonds[name][2:]) + other.evalbond(atomi, atomj))
+                print("%-20s %-20s %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f" % tuple(name.split('-') + list(selfbonds[name][2:]) + other.evalbond(atomi, atomj)))
         hbs = self.new_hbonds(other)
-        print "Newly formed hydrogen bonds (%d)" % (len(hbs))
+        print("Newly formed hydrogen bonds (%d)" % (len(hbs)))
         if len(hbs):
             for name in hbs:
                 atomi = other._model.GetAtom(otherbonds[name][0])
                 atomj = other._model.GetAtom(otherbonds[name][1])
-                print "%-20s %-20s %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f" % tuple(name.split('-') + list(otherbonds[name][2:]) + self.evalbond(atomi, atomj))
+                print("%-20s %-20s %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f %8.2f" % tuple(name.split('-') + list(otherbonds[name][2:]) + self.evalbond(atomi, atomj)))
 
 class X2YHBond(HydrogenBond):
     '''  Generic hydrogen bond class defined via residue types.
@@ -554,7 +554,7 @@ class BackboneNtoBackboneO(BackboneNHydrogenBond):
         listik1 = model.atom_lister('name_N', listik=bblistik)
         listik2 = model.atom_lister('name_O', listik=bblistik)
         self.store_lists(listik1, listik2, self.__class__.__name__, rcutoff=rcutoff)
-        self._aconts[self.__class__.__name__] = filter(lambda x : self._model.distance(x[2],x[4])>2.0, self._aconts[self.__class__.__name__])
+        self._aconts[self.__class__.__name__] = [x for x in self._aconts[self.__class__.__name__] if self._model.distance(x[2],x[4])>2.0]
     def get_namekl(self, namej):
         return get_bbo_names()
 

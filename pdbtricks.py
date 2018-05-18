@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 headerhelp = \
 '''PDB file manipulations.  Actions to perform on the input file are 
@@ -86,14 +86,15 @@ parser.add_argument('--rcutoff', type=float, default=4.0,
 					help='Distance cutoff, defaults to 4A')
 args = parser.parse_args()
 
-from pdbtool import ReadPDBfile as read_pdb_file
-from helper import range_check
+from .pdbtool import ReadPDBfile as read_pdb_file
+from .helper import range_check
 from scipy import array
 
 model = read_pdb_file(args.inpath)
 
 if args.ranges:
     ranges = dict([tuple([r[0], map(lambda s : tuple(map(int,s.split('-'))), r.split(',')[1:])]) for r in args.ranges.split('/')])
+    ranges = dict([tuple([r[0], [tuple([int(x) for x in s.split('-')]) for s in r.split(',')[1:]]]) for r in args.ranges.split('/')])
     try:
         uniranges = ranges.pop('*')
         for chid in model.GetChains():
@@ -112,45 +113,45 @@ for whatoprint in args.outprint:
         for chid in resids:
             if not args.chids or chid in args.chids:
                 for (i, resnum) in enumerate(resids[chid]):
-                    print '%3s %5s %6.2f %6.2f %6.2f' % (resnames[chid+resnum],
-                                                        chid+resnum.strip(), 
-                                                        b0[chid][i],
-                                                        b1[chid][i], 
-                                                        b2[chid][i])
+                    print('%3s %5s %6.2f %6.2f %6.2f' % (resnames[chid+resnum],\
+                                                        chid+resnum.strip(),\
+                                                        b0[chid][i],\
+                                                        b1[chid][i],\
+                                                        b2[chid][i]))
     elif whatoprint == 'chains':
         chanums = model.GetChains()
         bavs = model.GetAverageBfactor('chains')
-        print 'Chain   Atoms   <B>'
+        print('Chain   Atoms   <B>')
         for key in chanums:
-            print key + str(chanums[key]).rjust(12) + " %6.2f" % bavs[key]
+            print(key + str(chanums[key]).rjust(12) + " %6.2f" % bavs[key])
     elif whatoprint == 'phipsi':
         phi, psi = model.PhiPsiList()
-        for resid in model.resid_lister('p_bb')):
-            print "%6s %8.2f %8.2f" % (resid, phi.get(resid, float('nan')), psi .get(resid, float('nan')))
+        for resid in model.resid_lister('p_bb'):
+            print("%6s %8.2f %8.2f" % (resid, phi.get(resid, float('nan')), psi .get(resid, float('nan'))))
     elif whatoprint == 'bcontrast':
-        resids = filter(lambda y : array(map(lambda x : range_check(int(y[1:-1]),x), ranges.get(y[0],[]))).any(), set(map(lambda x : x.resid(), model.atoms)))
+        resids = [y for y in set([x.resid() for x in model.atoms]) if array([range_check(int(y[1:-1]),x) for x in ranges.get(y[0],[])]).any()]
         listik = model.atom_lister('resids', resids=resids)
-        print '%d atoms selected for analysis\n<B>sel = %.2f' % (len(listik), model.GetAverageBfactor('list', selection=listik))
+        print('%d atoms selected for analysis\n<B>sel = %.2f' % (len(listik), model.GetAverageBfactor('list', selection=listik)))
         vicatoms = model.atom_lister('vicinity', model.atom_lister('notwater'), corelist=listik, rcutoff=args.rcutoff)
-        print '%d non-water atoms found within %.2f Angstroms\n<B>sel = %.2f' % (len(vicatoms), args.rcutoff, model.GetAverageBfactor('list', selection=vicatoms))
+        print('%d non-water atoms found within %.2f Angstroms\n<B>sel = %.2f' % (len(vicatoms), args.rcutoff, model.GetAverageBfactor('list', selection=vicatoms)))
     elif whatoprint == 'hbonds':
         pass
     elif whatoprint == 'resgem':
         residue = model.get_residues('resid',resid=args.resid)[args.resid]
         b,a,t,m = residue.BondsAnglesTorsions(printout=True)
-        print 'Residue %s (%s)' % (args.resid, residue.get_res_name())
-        print '----------- Bonds ----------- '
+        print('Residue %s (%s)' % (args.resid, residue.get_res_name()))
+        print('----------- Bonds ----------- ')
         for x in b:
-            print x
-        print '----------- Angles ----------- '
+            print(x)
+        print('----------- Angles ----------- ')
         for x in a:
-            print x
-        print '----------- Torsions ----------- '
+            print(x)
+        print('----------- Torsions ----------- ')
         for x in t:
-            print x
-        print '----------- Impropers ----------- '
+            print(x)
+        print('----------- Impropers ----------- ')
         for x in m:
-            print x
+            print(x)
         
     
 if len(args.action) > 1:
@@ -161,7 +162,7 @@ for whatodo in args.action:
         if args.chids:
             model.writePDBchains(args.outpath, args.chids)
         else:
-            print 'This does not compute - extract chains but no chains listed?'
+            print('This does not compute - extract chains but no chains listed?')
     elif whatodo == 'rjust-resid':
         model.rjust_res_names()
         model.writePDB(args.outpath)
@@ -169,15 +170,15 @@ for whatodo in args.action:
         if ranges:
             model.extract_range(ranges).writePDB(args.outpath)
         else:
-            print 'This does not compute - extract but no ranges listed?'
+            print('This does not compute - extract but no ranges listed?')
     elif whatodo == 'tinertia-ranges':
         if ranges:
             ramodel = model.extract_range(ranges)
             tin = ramodel.GetInertiaTensor(ramodel.atom_lister('backbone'))
         else:
             tin = model.GetInertiaTensor(model.atom_lister('backbone'))
-        print tin.report()
-        print tin.frame()
+        print(tin.report())
+        print(tin.frame())
     elif whatodo == 'tinertia-slider':
         pass
     elif whatodo == 'center-orient':
