@@ -13,7 +13,7 @@ typarser = {
 
 def get_columns(item=None):
     if item:
-        return map(lambda t : (t[0], typarser.get(type(t[1]),'text')), item.__dict__.items())
+        return [(t[0], typarser.get(type(t[1]),'text')) for t in item.__dict__.items()]
     else:
         return []
 
@@ -21,7 +21,7 @@ def make_create_statements(tables):
     retval = []
     for table, item, extras in tables:
         stmt = 'create table ' + table + ' ('
-        stmt += ', '.join(map(lambda x : ' '.join(x), [('pdbcode','text')]+get_columns(item)))
+        stmt += ', '.join([' '.join(x) for x in [('pdbcode','text')]+get_columns(item)]
         stmt += ", FOREIGN KEY (pdbcode) REFERENCES pdbcodes (pdbcode) ON DELETE CASCADE ON UPDATE CASCADE"
         if extras:
             stmt += ", "+extras
@@ -41,7 +41,7 @@ class pdbase(object):
             conn.close()
         self.conn = sqlite3.connect(sqlite_file)
         self.cur = self.conn.cursor()
-        self.table_item_class = dict(map(lambda x : (x[0], x[1].__class__), self.tables))
+        self.table_item_class = dict([(x[0], x[1].__class__) for x in self.tables])
     def fetch_processed_codes(self):
         codes = zip(*self.cur.execute('select pdbcode from pdbcodes where status=1').fetchall())
         if len(codes):
@@ -70,7 +70,7 @@ class pdbase(object):
             cursor = self.cur.execute('select * from '+table+' where pdbcode=?',tuple([pdbcode]))
         else:
             cursor = self.cur.execute('select * from '+table)
-        keys = map(lambda t : t[0], cursor.description)[1:]
+        keys = [t[0] for t in cursor.description][1:]
         items = []
         itemclass = self.table_item_class[table]
         for values in cursor.fetchall():

@@ -25,18 +25,18 @@ if args.pdb:
     if model:
         ssx = get_ssrecords(args.pdb, sanitize=True)
         helices = ssx.get_helices(model)
-        htins = map(lambda x : x.GetInertiaTensor(), helices)
+        htins = [x.GetInertiaTensor() for x in helices]
         strands = ssx.get_strands(model)
-        blens = map(lambda x : x.GetProteinResidueNumber(), strands)
-        btins = map(lambda x : x.GetInertiaTensor(), strands)
-        for h, t in filter(lambda x : x[1].valid, zip(*[ssx.helices, htins])):
-            print "Helix #%-3d: %5.2f %5.2f %5.2f %4d residues long, %s" % tuple([h.serNum] + t.eccent + [h.length, h.helix_class()])
-        for b, length, t in filter(lambda x : x[2].valid, zip(*[ssx.strands, blens, btins])):
-            print "Sheet %4s Strand #%-3d: %5.2f %5.2f %5.2f %4d residues long, %s" % tuple([b.sheetID, b.strand] + t.eccent + [length, b.strand_sense()])
+        blens = [x.GetProteinResidueNumber() for x in strands]
+        btins = [x.GetInertiaTensor() for x in strands]
+        for h, t in [x for x in zip(*[ssx.helices, htins]) if x[1].valid]:
+            print("Helix #%-3d: %5.2f %5.2f %5.2f %4d residues long, %s" % tuple([h.serNum] + t.eccent + [h.length, h.helix_class()]))
+        for b, length, t in [x for x in zip(*[ssx.strands, blens, btins]) if x[2].valid]:
+            print("Sheet %4s Strand #%-3d: %5.2f %5.2f %5.2f %4d residues long, %s" % tuple([b.sheetID, b.strand] + t.eccent + [length, b.strand_sense()]))
 if args.list_file:
     if os.access(args.list_file, os. R_OK):
         with open(args.list_file) as flist:
-            codes = map(lambda x : x.split()[0], flist.readlines())
+            codes = [x.split()[0] for x in flist.readlines()]
         dbase = sstin_dbase(args.sqlite_file)
         codes = dbase.filter_codes(codes)
         for code in codes:
@@ -46,13 +46,13 @@ if args.list_file:
             if model:
                 ssx = get_ssrecords(code, sanitize=True)
                 helices = ssx.get_helices(model)
-                htins = map(lambda x : x.GetInertiaTensor(), helices)
+                htins = [x.GetInertiaTensor() for x in helices]
                 strands = ssx.get_strands(model)
-                blens = map(lambda x : x.GetProteinResidueNumber(), strands)
-                btins = map(lambda x : x.GetInertiaTensor(), strands)
-                for h, t in filter(lambda x : x[1].valid, zip(*[ssx.helices, htins])):
+                blens = [x.GetProteinResidueNumber() for x in strands]
+                btins = [x.GetInertiaTensor() for x in strands]
+                for h, t in [x for x in zip(*[ssx.helices, htins]) if x[1].valid]:
                     dbase.insert_helix(code, h, t)
-                for b, length, t in filter(lambda x : x[2].valid, zip(*[ssx.strands, blens, btins])):
+                for b, length, t in [x for x in zip(*[ssx.strands, blens, btins]) if x[2].valid]:
                     dbase.insert_strand(code, b, t, length)
                 dbase.code_lock(code)
                 dbase.commit()
