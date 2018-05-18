@@ -22,8 +22,8 @@ parser.add_argument('--pcutoff', type=float, default=0.01,
 parser.add_argument('--bondtype', default='all',
                                         help='Comma-separated list of bond types you wish to show.  Defaults to "all"')
 args = parser.parse_args()
-from .pdbtool import ReadPDBfile as read_pdb_file
-from .pdbtool import pdbmolecule
+from pdbtool import ReadPDBfile as read_pdb_file
+from pdbtool import pdbmolecule
 import aconts, sys
 model1 = read_pdb_file(args.model1)
 if model1 is None:

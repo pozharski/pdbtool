@@ -5,14 +5,14 @@ Includes pdbatom and pdbmolecule classes
 
 import gzip, urllib.request, os, random, math, sys, re, copy, logging, time
 
-from . import pdbnames, SpaceGroups
-from .helper import progressbar
-from .rotate import transform_list
+import pdbnames, SpaceGroups
+from helper import progressbar
+from rotate import transform_list
 from tinertia import TInertia
 from scipy.linalg import eigh
 from scipy import   array, cos, sin, pi, radians, sqrt, dot, cross, \
                     randn, zeros, matrix, ones, floor, nonzero, \
-                    degrees, acos, arctan2
+                    degrees, arccos, arctan2
 from collections import Counter
 
 def read_multi_model_pdb(pdbin, remark_parser=None):
@@ -58,15 +58,13 @@ def read_multi_model_pdb(pdbin, remark_parser=None):
 def ReadPDBfile(pdbin, readcell=True):
     atoms, anisous = [], []
     modelN = 0
-    if type(pdbin) == file:
-        source = pdbin
-    elif type(pdbin) == str:
+    if type(pdbin) == str:
         try:
             source = open(pdbin)
         except IOError:
             return None
     else:
-        return None
+        source = pdbin
     cell = None
     for line in source:
         if line[:5] == 'MODEL':
@@ -1640,7 +1638,7 @@ class pdbmolecule:
     def angle(self,i,j,k):
         r1 = self.r(j,i)
         r2 = self.r(j,k)
-        return degrees(acos((r1*r2).sum()/sqrt((r1**2).sum()*(r2**2).sum())))
+        return degrees(arccos((r1*r2).sum()/sqrt((r1**2).sum()*(r2**2).sum())))
 
     def r(self,i,j):
         return self.atoms[j].xyz - self.atoms[i].xyz
@@ -1762,6 +1760,19 @@ class pdbmolecule:
         ''' Returns the dictionary of chains with chain IDs as keys and
             number of atoms in each chain as values. '''
         return Counter([a.chainID() for a in self.atom_getter()])
+
+    def GetChainIDs(self):
+        ''' Returns the sorted list of chain IDs present.'''
+        return sorted(set([a.chainID() for a in self.atom_getter()]))
+
+    def rename_chain(self, chid1, chid2, forced=False, what='all', listik=False, *args, **kwargs):
+        ''' Changes chain ID for atoms in in chid1 to chid2.  Asserts
+            that chid2 doesn't exist unless forced.'''
+        if not forced:
+            assert chid2 not in self.GetChainIDs(), 'Chain '+chid2+' already present, exiting.'
+        listik = self.atom_lister(what, listik, *args, **kwargs)
+        for atom in self.atom_getter('chid', listik, chid=chid1):
+            atom.SetChain(chid2)
 
     def __headwrite_(self, fout, header=None):
         if header is None:
@@ -2264,7 +2275,7 @@ class pdbresidue:
     def angle(self,i,j,k):
         r1 = self.r(j,i)
         r2 = self.r(j,k)
-        return math.degrees(math.acos((r1*r2).sum()/math.sqrt((r1**2).sum()*(r2**2).sum())))
+        return math.degrees(arccos((r1*r2).sum()/math.sqrt((r1**2).sum()*(r2**2).sum())))
     def torsion(self,i,j,k,l):
         b1 = self.r(i,j)
         b2 = self.r(j,k)
@@ -3050,12 +3061,12 @@ def torsion(i,j,k,l):
 def angle(i,j,k):
     r1 = r(i,j)
     r2 = r(k,j)
-    return math.degrees(math.acos((r1*r2).sum()/math.sqrt((r1**2).sum()*(r2**2).sum())))
+    return math.degrees(arccos((r1*r2).sum()/math.sqrt((r1**2).sum()*(r2**2).sum())))
 
 def angle2(i,j,k):
     r1 = i-j
     r2 = k-j
-    return math.degrees(math.acos((r1*r2).sum()/math.sqrt((r1**2).sum()*(r2**2).sum())))
+    return math.degrees(arccos((r1*r2).sum()/math.sqrt((r1**2).sum()*(r2**2).sum())))
 
 def distance(i,j):
     return math.sqrt(((i.xyz-j.xyz)**2).sum())

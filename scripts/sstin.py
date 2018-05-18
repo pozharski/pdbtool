@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 headerhelp = \
 '''
 SSTIN runs the survey of inertia ellipsoids of secondary structure

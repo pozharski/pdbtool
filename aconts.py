@@ -1,4 +1,4 @@
-from .pdbtool import pdbmolecule
+from pdbtool import pdbmolecule
 from scipy import exp, sqrt, log
 
 DAKERNEL_PARAMS = {
@@ -135,7 +135,7 @@ class ACreader(object):
     def _extra_report(self):
         return ''
 
-from .pdbminer import pdbase
+from pdbminer import pdbase
 class atom_contact_pdbase(pdbase):
     tables = [('atom_contacts', ACreader(), '')]
 
@@ -209,12 +209,7 @@ class HydrogenBond(AtomContact):
         if j is None:
             return [float('nan'), float('nan'), float('nan'), float('nan')]
         d = self._model.distance(i,j)
-        dummy=self._model.GetAtom(i).copy()
-        nameh, nameg = self.get_namegh(dummy.GetName())
-        dummy.set_name(nameh)
-        h = self._model.find(dummy, resindi)
-        dummy.set_name(nameg)
-        g = self._model.find(dummy, resindi)
+        g,h = self.get_gh(i)
         if h is None:
             return [d, float('nan'), float('nan'), float('nan')]
         elif g is None:

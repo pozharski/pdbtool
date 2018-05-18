@@ -7,8 +7,8 @@ create_statements = [
 typarser = {
     int     : 'integer',
     float   : 'real',
+    bytes   : 'text',
     str     : 'text',
-    unicode : 'text',
 }
 
 def get_columns(item=None):
@@ -21,7 +21,7 @@ def make_create_statements(tables):
     retval = []
     for table, item, extras in tables:
         stmt = 'create table ' + table + ' ('
-        stmt += ', '.join([' '.join(x) for x in [('pdbcode','text')]+get_columns(item)]
+        stmt += ', '.join([' '.join(x) for x in [('pdbcode','text')]+get_columns(item)])
         stmt += ", FOREIGN KEY (pdbcode) REFERENCES pdbcodes (pdbcode) ON DELETE CASCADE ON UPDATE CASCADE"
         if extras:
             stmt += ", "+extras

@@ -7,6 +7,9 @@ defined by -a option. Allowed actions are:
     extract-chains      Extract only chains specified by --chids option
     extract-ranges      Extracts atoms that belong to the list of 
                         residue ranges
+    rename-chains       Rename chains using the pattern defined by
+                        --chids option.  For example, "AB,CD" will
+                        rename A to B and C to D.
     rjust-resid         Makes sure residue names are right-justified
     tinertia-ranges     Outputs tensor of inertia information for 
                         specified ranges
@@ -48,6 +51,7 @@ parser.add_argument('outpath', nargs='?',
                     help='The output PDB file.')
 parser.add_argument('-a', '--action', action='append',
                     choices = [	'extract-chains',
+                                'rename-chains',
 								'rjust-resid', 
 								'extract-ranges',
 								'tinertia-ranges',
@@ -86,8 +90,8 @@ parser.add_argument('--rcutoff', type=float, default=4.0,
 					help='Distance cutoff, defaults to 4A')
 args = parser.parse_args()
 
-from .pdbtool import ReadPDBfile as read_pdb_file
-from .helper import range_check
+from pdbtool import ReadPDBfile as read_pdb_file
+from helper import range_check
 from scipy import array
 
 model = read_pdb_file(args.inpath)
@@ -187,3 +191,10 @@ for whatodo in args.action:
         tin_remodel = remodel.GetInertiaTensor()
         remodel.transform(tin_remodel.vr)
         remodel.writePDB(args.outpath)
+    elif whatodo == 'rename-chains':
+        if args.chids:
+            for chid1,chid2 in [(x[0],x[1]) for x in args.chids.split(',')]:
+                model.rename_chain(chid1,chid2)
+            model.writePDB(args.outpath)
+        else:
+            print('This does not compute - rename chains but no chain pairs listed?')
