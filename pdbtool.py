@@ -1397,6 +1397,13 @@ class pdbmolecule:
         else:
             return [self.atoms[i] for i in listik]
 
+    def get_residnames(self, what='all', listik=False, *args, **kwargs):
+        ''' Returns a distionary with residue IDs as keys and residue
+            names as values. Selection parameters are the same as in 
+            atom_lister method. '''
+        return dict(set([(a.resid(),a.resName()) for a in self.atom_getter(what, listik, *args, **kwargs)]))
+        
+
     def ListByAltConf(self, ac, listik=False):
         '''
         Return atom indices (from the listik if provided) with the selected

@@ -20,7 +20,9 @@ parser.add_argument('--dhamin', type=float, default=90.0,
 parser.add_argument('--pcutoff', type=float, default=0.01,
 					help='p-value cutoff for including hydrogen bonds')
 parser.add_argument('--bondtype', default='all',
-                                        help='Comma-separated list of bond types you wish to show.  Defaults to "all"')
+                    help='Comma-separated list of bond types you wish to show.  Defaults to "all"')
+parser.add_argument('--bbout',
+                    help='Path to the output PDB file showing backbone differences as B-factors.')
 args = parser.parse_args()
 from pdbtool import ReadPDBfile as read_pdb_file
 from pdbtool import pdbmolecule
@@ -31,7 +33,8 @@ if model1 is None:
 model2 = read_pdb_file(args.model2)
 if model2 is None:
     sys.exit('Failed to read the model coordinates from '+args.model2)
-if args.bondtype.lower() == 'all':
+if args.bondtype.lower() == 'all' or args.bondtype.lower() == 'backbone':
+    residnames = model1.get_residnames()
     bb1 = model1.backbone()
     bb2 = model2.backbone()
     hb1 = bb1.MChbonds(args.ohmax, args.nomax, args.dhamin)
@@ -40,23 +43,23 @@ if args.bondtype.lower() == 'all':
     print("Conserved main chain hydrogen bonds")
     for hbond in sorted(list(set(hb1).intersection(hb2))):
         ticks = int(10*(hb1[hbond][1]-hb2[hbond][1]))
-        print("%7s%7s %6.2f %6.2f %10s|%-10s" % (hbond[:6], hbond[6:], hb1[hbond][1], hb2[hbond][1], '*'*min(ticks,10), '*'*min(-ticks,10)))
+        print("%3s%7s%3s%7s %6.2f %6.2f %10s|%-10s" % (residnames.get(hbond[:6]), hbond[:6], residnames.get(hbond[6:]), hbond[6:], hb1[hbond][1], hb2[hbond][1], '*'*min(ticks,10), '*'*min(-ticks,10)))
     print("Broken mainchain hydrogen bonds")
     for hbond in sorted(list(set(hb1).difference(hb2))):
         if hbond[:6] not in bb2.protons or hbond[6:] not in bb2.residues:
-            print("%7s%7s %6.2f ??????" % (hbond[:6], hbond[6:], hb1[hbond][1]))
+            print("%3s%7s%3s%7s %6.2f ??????" % (residnames.get(hbond[:6]), hbond[:6], residnames.get(hbond[6:]), hbond[6:], hb1[hbond][1]))
         else:
             otherbond = bb2.get_mchbond(hbond[:6], hbond[6:])
             ticks = int(10*(hb1[hbond][1]-otherbond[1]))
-            print("%7s%7s %6.2f %6.2f %10s|%-10s" % (hbond[:6], hbond[6:], hb1[hbond][1], otherbond[1], '*'*min(ticks,10), '*'*min(-ticks,10)))
+            print("%3s%7s%3s%7s %6.2f %6.2f %10s|%-10s" % (residnames.get(hbond[:6]), hbond[:6], residnames.get(hbond[6:]), hbond[6:], hb1[hbond][1], otherbond[1], '*'*min(ticks,10), '*'*min(-ticks,10)))
     print("Newly formed mainchain hydrogen bonds")
     for hbond in sorted(list(set(hb2).difference(hb1))):
         if hbond[:6] not in bb1.protons or hbond[6:] not in bb1.residues:
-            print("%7s%7s ?????? %6.2f" % (hbond[:6], hbond[6:], hb2[hbond][1]))
+            print("%3s%7s%3s%7s ?????? %6.2f" % (residnames.get(hbond[:6]), hbond[:6], residnames.get(hbond[6:]), hbond[6:], hb2[hbond][1]))
         else:
             otherbond = bb1.get_mchbond(hbond[:6], hbond[6:])
             ticks = int(10*(otherbond[1]-hb2[hbond][1]))
-            print("%7s%7s %6.2f %6.2f %10s|%-10s" % (hbond[:6], hbond[6:], otherbond[1], hb2[hbond][1], '*'*min(ticks,10), '*'*min(-ticks,10)))
+            print("%3s%7s%3s%7s %6.2f %6.2f %10s|%-10s" % (residnames.get(hbond[:6]), hbond[:6], residnames.get(hbond[6:]), hbond[6:], otherbond[1], hb2[hbond][1], '*'*min(ticks,10), '*'*min(-ticks,10)))
     print("--------------------------------------------------------------------------------")
 print("Side chain hydrogen bonds listed by type")
 if args.bondtype.lower() == 'all':
@@ -87,11 +90,12 @@ if args.bondtype.lower() == 'all':
 else:
     keys = args.bondtype.split(',')
 for key in keys:
-    print("--------------------------------------------------------------------------------")
-    HydroBonds = eval('aconts.'+key)
-    hb1 = HydroBonds(model1, rcutoff=min(3.2,aconts.pcutoff(0.01, key)))
-    hb1.pfilter(args.pcutoff)
-    hb2 = HydroBonds(model2, rcutoff=min(3.2,aconts.pcutoff(0.01, key)))
-    hb2.pfilter(args.pcutoff)
-    print(HydroBonds.__doc__)
-    hb1.report_diffs(hb2)
+    if key in dir(aconts):
+        print("--------------------------------------------------------------------------------")
+        HydroBonds = eval('aconts.'+key)
+        hb1 = HydroBonds(model1, rcutoff=min(3.2,aconts.pcutoff(0.01, key)))
+        hb1.pfilter(args.pcutoff)
+        hb2 = HydroBonds(model2, rcutoff=min(3.2,aconts.pcutoff(0.01, key)))
+        hb2.pfilter(args.pcutoff)
+        print(HydroBonds.__doc__)
+        hb1.report_diffs(hb2)
