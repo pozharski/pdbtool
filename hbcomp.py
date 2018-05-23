@@ -19,7 +19,7 @@ parser.add_argument('--dhamin', type=float, default=90.0,
 					help='Minimum donor...hydrogen...acceptor angle in hydrogen bonds')
 parser.add_argument('--pcutoff', type=float, default=0.01,
 					help='p-value cutoff for including hydrogen bonds')
-parser.add_argument('--bondtype', default='all',
+parser.add_argument('-b', '--bondtype', default='all',
                     help='Comma-separated list of bond types you wish to show.  Defaults to "all"')
 parser.add_argument('--bbout',
                     help='Path to the output PDB file showing backbone differences as B-factors.')
@@ -40,26 +40,26 @@ if args.bondtype.lower() == 'all' or args.bondtype.lower() == 'backbone':
     hb1 = bb1.MChbonds(args.ohmax, args.nomax, args.dhamin)
     hb2 = bb2.MChbonds(args.ohmax, args.nomax, args.dhamin)
     print("--------------------------------------------------------------------------------")
-    print("Conserved main chain hydrogen bonds")
-    for hbond in sorted(list(set(hb1).intersection(hb2))):
-        ticks = int(10*(hb1[hbond][1]-hb2[hbond][1]))
-        print("%3s%7s%3s%7s %6.2f %6.2f %10s|%-10s" % (residnames.get(hbond[:6]), hbond[:6], residnames.get(hbond[6:]), hbond[6:], hb1[hbond][1], hb2[hbond][1], '*'*min(ticks,10), '*'*min(-ticks,10)))
-    print("Broken mainchain hydrogen bonds")
-    for hbond in sorted(list(set(hb1).difference(hb2))):
+    hbonds = sorted(list(set(hb1).intersection(hb2)))
+    print("Conserved main chain hydrogen bonds (%d)" % len(hbonds))
+    for hbond in hbonds:
+        print("%3s%7s N %3s%7s O %6.2f %6.1f %6.2f %6.1f " % (residnames.get(hbond[:6]), hbond[:6], residnames.get(hbond[6:]), hbond[6:], hb1[hbond][1], hb1[hbond][2], hb2[hbond][1], hb2[hbond][2]))
+    hbonds = sorted(list(set(hb1).difference(hb2)))
+    print("Broken mainchain hydrogen bonds (%d)" % len(hbonds))
+    for hbond in hbonds:
         if hbond[:6] not in bb2.protons or hbond[6:] not in bb2.residues:
-            print("%3s%7s%3s%7s %6.2f ??????" % (residnames.get(hbond[:6]), hbond[:6], residnames.get(hbond[6:]), hbond[6:], hb1[hbond][1]))
+            print("%3s%7s N %3s%7s O %6.2f %6.1f ??????" % (residnames.get(hbond[:6]), hbond[:6], residnames.get(hbond[6:]), hbond[6:], hb1[hbond][1], hb1[hbond][2]))
         else:
             otherbond = bb2.get_mchbond(hbond[:6], hbond[6:])
-            ticks = int(10*(hb1[hbond][1]-otherbond[1]))
-            print("%3s%7s%3s%7s %6.2f %6.2f %10s|%-10s" % (residnames.get(hbond[:6]), hbond[:6], residnames.get(hbond[6:]), hbond[6:], hb1[hbond][1], otherbond[1], '*'*min(ticks,10), '*'*min(-ticks,10)))
-    print("Newly formed mainchain hydrogen bonds")
-    for hbond in sorted(list(set(hb2).difference(hb1))):
+            print("%3s%7s N %3s%7s O %6.2f %6.1f %6.2f %6.1f " % (residnames.get(hbond[:6]), hbond[:6], residnames.get(hbond[6:]), hbond[6:], hb1[hbond][1], hb1[hbond][2], otherbond[1], otherbond[2]))
+    hbonds = sorted(list(set(hb2).difference(hb1)))
+    print("Newly formed mainchain hydrogen bonds (%d)" % len(hbonds))
+    for hbond in hbonds:
         if hbond[:6] not in bb1.protons or hbond[6:] not in bb1.residues:
-            print("%3s%7s%3s%7s ?????? %6.2f" % (residnames.get(hbond[:6]), hbond[:6], residnames.get(hbond[6:]), hbond[6:], hb2[hbond][1]))
+            print("%3s%7s N %3s%7s O ?????? %6.2f %6.1f" % (residnames.get(hbond[:6]), hbond[:6], residnames.get(hbond[6:]), hbond[6:], hb2[hbond][1], hb2[hbond][2]))
         else:
             otherbond = bb1.get_mchbond(hbond[:6], hbond[6:])
-            ticks = int(10*(otherbond[1]-hb2[hbond][1]))
-            print("%3s%7s%3s%7s %6.2f %6.2f %10s|%-10s" % (residnames.get(hbond[:6]), hbond[:6], residnames.get(hbond[6:]), hbond[6:], otherbond[1], hb2[hbond][1], '*'*min(ticks,10), '*'*min(-ticks,10)))
+            print("%3s%7s N %3s%7s O %6.2f %6.1f %6.2f %6.1f " % (residnames.get(hbond[:6]), hbond[:6], residnames.get(hbond[6:]), hbond[6:], otherbond[1], otherbond[2], hb2[hbond][1], hb2[hbond][2]))
     print("--------------------------------------------------------------------------------")
 print("Side chain hydrogen bonds listed by type")
 if args.bondtype.lower() == 'all':
