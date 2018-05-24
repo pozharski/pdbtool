@@ -1834,6 +1834,11 @@ class pdbmolecule:
                         break
         return pdbmolecule(atoms=extracted_atoms, cell=self.cell)
 
+    def range_residues(self, ranges):
+        resids = set([a.resid() for a in self.atom_getter() if a.chainID() in ranges])
+        resids = [x for x in resids if sum([self.__range_checker_(int(x[1:]),y) for y in ranges.get(x[0])])]
+        return resids
+
     def __range_checker_(self, value, limits):
         return value >= limits[0] and value <= limits[1]
 

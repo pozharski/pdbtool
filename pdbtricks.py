@@ -97,7 +97,6 @@ from scipy import array
 model = read_pdb_file(args.inpath)
 
 if args.ranges:
-    ranges = dict([tuple([r[0], map(lambda s : tuple(map(int,s.split('-'))), r.split(',')[1:])]) for r in args.ranges.split('/')])
     ranges = dict([tuple([r[0], [tuple([int(x) for x in s.split('-')]) for s in r.split(',')[1:]]]) for r in args.ranges.split('/')])
     try:
         uniranges = ranges.pop('*')

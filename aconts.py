@@ -264,6 +264,8 @@ class HydrogenBond(AtomContact):
         return da_pvalue(self.__class__.__name__, d, a)
     def pfilter(self, p):
         self._aconts[self.__class__.__name__] = [x for x in self._aconts[self.__class__.__name__] if self.da_pvalue(x[6],x[7])>p]
+    def resid_filter(self, resids):
+        self._aconts[self.__class__.__name__] = [x for x in self._aconts[self.__class__.__name__] if self._model.GetAtom(x[2]).resid() in resids or self._model.GetAtom(x[3]).resid() in resids]
     def report_pval(self):
         for h,g,i,j,k,l,r,angle1,tor1,angle2,tor2 in self._aconts[self.__class__.__name__]:
             print("%-16s %-16s %8.2f %8.2f %8.2f %8.2f" % (self._model.GetAtomTitle(i), self._model.GetAtomTitle(j), r, angle1,tor1,self.da_pvalue(r,angle1)))
