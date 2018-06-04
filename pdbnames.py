@@ -19,7 +19,7 @@ AMINO_ACIDS = {
 'VAL':['C','CA','CB','CG1','CG2','N','O'],
 'TRP':['C','CA','CB','CD1','CD2','CE2','CE3','CG','CH2','CZ2','CZ3','N','NE1','O'],
 'TYR':['C','CA','CB','CD1','CD2','CE1','CE2','CG','CZ','N','O','OH'],
-'CME':['C', 'CA', 'CB', 'CE', 'CZ', 'N', 'O', 'OH', 'SD', 'SG'],
+'CME':['C','CA','CB','CE','CZ','N','O','OH','SD','SG'],
 'TPO':['C','CA','CB','CG2','N','O','OG1','P','O1P','O2P','O3P'],
 'PTR':['C','CA','CB','CD1','CD2','CE1','CE2','CG','CZ','N','O','OH','P','O1P','O2P','O3P'],
 'UNK':['C','CA','CB','N','O'],
@@ -184,6 +184,7 @@ MASS = {
 'CL': 34.453,
 'K' : 39.098,
 'CA': 40.078,
+'Ca': 40.078,
 'MN': 54.938,
 'FE': 55.845,
 'CO': 58.933,
@@ -214,6 +215,7 @@ VDWRADIUS = {
 'CL': 1.75,
 'K' : 2.75,
 'CA': 2.40,
+'Ca': 2.40,
 'MN': 2.00,
 'FE': 2.00,
 'CO': 2.00,
@@ -226,7 +228,7 @@ VDWRADIUS = {
 }
 
 POLARS = ['F', 'SE', 'CL',  'N', 'O', 'P', 'S']
-METALS = ['MN', 'MG', 'HG', 'CA', 'CL', 'K', 'FE', 'CO', 'NA', 'LI', 'ZN', 'PB', 'CU', 'NI']
+METALS = ['MN', 'MG', 'HG', 'CA', 'Ca', 'CL', 'K', 'FE', 'CO', 'NA', 'LI', 'ZN', 'PB', 'CU', 'NI']
 
 def Is3Amino(name):
     return name in AMINO_ACIDS

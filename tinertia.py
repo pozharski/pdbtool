@@ -77,6 +77,7 @@ class TInertia:
         retline  = prefix+'_MASS %.2f %.2f\n' % (self.mass, other.mass)
         retline += prefix+'_COM %.2f %.2f %.2f\n' % tuple(self.shift3(other))
         retline += prefix+'_ABC %.2f %.2f %.2f %.2f %.2f %.2f\n' % tuple(self.abc.tolist()+other.abc.tolist())
+        return retline
 
     def reportcomp(self, other):
         retline  = 'Total mass change: %.1f vs %.1f\n' % (self.mass, other.mass)

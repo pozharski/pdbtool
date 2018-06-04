@@ -1183,6 +1183,8 @@ class pdbmolecule:
                                     atoms as coreatoms argument and optional
                                     rcutoff (defaults to 4A).  Notice that the
                                     atom list may become unsorted
+            'sphere'            - similar to vicinity, but includes core
+                                    atoms as well
             'rat'               - specific residue/atom name combination.
                                     For example, ASPOD1 designates OD1
                                     atoms in aspartic acids.  Must provide 
@@ -1237,6 +1239,10 @@ class pdbmolecule:
             r2cutoff = kwargs.get('rcutoff', 4.0)**2
             coreXYZ = array([x.GetR() for x in kwargs['coreatoms']])
             return [x for x in set(atoms).difference(kwargs['coreatoms']) if (((coreXYZ-x.GetR())**2).sum(1)<=r2cutoff).any()]
+        elif whatlow == 'sphere':
+            r2cutoff = kwargs.get('rcutoff', 4.0)**2
+            coreXYZ = array([x.GetR() for x in kwargs['coreatoms']])
+            return [x for x in set(atoms).difference(kwargs['coreatoms']) if (((coreXYZ-x.GetR())**2).sum(1)<=r2cutoff).any()]+kwargs['coreatoms']
         elif whatlow == 'rat':
             return [x for x in atoms if x.rat in kwargs['rats']]
         elif whatlow == 'altconf':
@@ -1282,6 +1288,8 @@ class pdbmolecule:
                                     "core atoms".  Must pass the list of core
                                     atoms as corelist argument and optional
                                     rcutoff (defaults to 4A)
+            'sphere'            - similar to vicinity, but includes core
+                                    atoms as well
             'rat'               - specific residue/atom name combination.
                                     For example, ASPOD1 designates OD1
                                     atoms in aspartic acids.  Must provide 
@@ -1336,6 +1344,10 @@ class pdbmolecule:
             r2cutoff = kwargs.get('rcutoff', 4.0)**2
             coreXYZ = self.GetCoordinateArray(kwargs['corelist'])
             return sorted([i for i in set(listik).difference(kwargs['corelist']) if (((coreXYZ-self.GetAtomR(i))**2).sum(1)<=r2cutoff).any()])
+        elif whatlow == 'sphere':
+            r2cutoff = kwargs.get('rcutoff', 4.0)**2
+            coreXYZ = self.GetCoordinateArray(kwargs['corelist'])
+            return sorted([i for i in set(listik).difference(kwargs['corelist']) if (((coreXYZ-self.GetAtomR(i))**2).sum(1)<=r2cutoff).any()]+kwargs['corelist'])
         elif whatlow == 'rat':
             return [i for i in listik if self.atoms[i].rat() in kwargs['rats']]
         elif whatlow == 'altconf':
