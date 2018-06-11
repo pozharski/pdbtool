@@ -134,9 +134,9 @@ for whatoprint in args.outprint:
     elif whatoprint == 'bcontrast':
         resids = [y for y in set([x.resid() for x in model.atoms]) if array([range_check(int(y[1:-1]),x) for x in ranges.get(y[0],[])]).any()]
         listik = model.atom_lister('resids', resids=resids)
-        print('%d atoms selected for analysis\n<B>sel = %.2f' % (len(listik), model.GetAverageBfactor('list', selection=listik)))
+        print('%d atoms selected for analysis\n<B>sel = %.2f' % (len(listik), model.GetAverageBfactor(listik=listik)))
         vicatoms = model.atom_lister('vicinity', model.atom_lister('notwater'), corelist=listik, rcutoff=args.rcutoff)
-        print('%d non-water atoms found within %.2f Angstroms\n<B>sel = %.2f' % (len(vicatoms), args.rcutoff, model.GetAverageBfactor('list', selection=vicatoms)))
+        print('%d non-water atoms found within %.2f Angstroms\n<B>vic = %.2f' % (len(vicatoms), args.rcutoff, model.GetAverageBfactor(listik=vicatoms)))
     elif whatoprint == 'hbonds':
         pass
     elif whatoprint == 'resgem':

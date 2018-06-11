@@ -1054,7 +1054,7 @@ class pdbmolecule:
 
     def GetListedAtoms(self, listik):
         ''' Returns the list of atoms from selection. '''
-        return list(array(self.atoms)[listik])
+        return array(self.atoms)[listik].tolist()
 
     def GetAtomResID(self, i):
         ''' Returns the resid of the residue atom belongs to (e.g. "A 234B" or 
@@ -1477,7 +1477,7 @@ class pdbmolecule:
         ''' Returns the average B-factor of a group of atoms.  
             Selection parameters are the same as in atom_lister method.
         '''
-        return GetListAverageB(self.atom_lister(what, listik, *args, **kwargs))
+        return self.GetListAverageB(self.atom_lister(what, listik, *args, **kwargs))
 
     def GetChainAverageBfactor(self, what='all', listik=False, *args, **kwargs):
         ''' Returns a dictionary of average B-factors for each chain.
