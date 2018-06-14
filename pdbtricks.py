@@ -123,7 +123,7 @@ for whatoprint in args.outprint:
                                                         b2[chid][i]))
     elif whatoprint == 'chains':
         chanums = model.GetChains()
-        bavs = model.GetAverageBfactor('chains')
+        bavs = model.GetChainAverageBfactor()
         print('Chain   Atoms   <B>')
         for key in chanums:
             print(key + str(chanums[key]).rjust(12) + " %6.2f" % bavs[key])
