@@ -91,23 +91,12 @@ parser.add_argument('--rcutoff', type=float, default=4.0,
 args = parser.parse_args()
 
 from pdbtool import ReadPDBfile as read_pdb_file
-from helper import range_check
+from helper import range_check, parse_ranges
 from scipy import array
 
 model = read_pdb_file(args.inpath)
 
-if args.ranges:
-    ranges = dict([tuple([r[0], [tuple([int(x) for x in s.split('-')]) for s in r.split(',')[1:]]]) for r in args.ranges.split('/')])
-    try:
-        uniranges = ranges.pop('*')
-        for chid in model.GetChains():
-            ranges[chid] = ranges.get(chid, [])
-            ranges[chid].extend(uniranges)
-    except KeyError:
-        pass
-else:
-    ranges = None
-
+ranges = parse_ranges(args.ranges, model.GetChains()) if args.ranges else None
 
 for whatoprint in args.outprint:
     if whatoprint == 'bvalue':

@@ -1137,10 +1137,10 @@ class pdbmolecule:
             Defaults to all atoms in the molecule. '''
         return array([a.mass() for a in self.atom_getter(listik=listik)])
 
-    def GetMOVector(self, listik=False):
+    def GetMOVector(self, what='all', listik=False, *args, **kwargs):
         ''' Returns an array of occupancy weighted masses or a list of 
             atoms. Defaults to all atoms in the molecule. '''
-        return array([a.GetOccupancy()*a.mass() for a in self.atom_getter(listik=listik)])
+        return array([a.GetOccupancy()*a.mass() for a in self.atom_getter(what, listik, *args, **kwargs)])
 
 # --- Methods that return atom lists
 
@@ -1541,9 +1541,9 @@ class pdbmolecule:
             return x
         return None
 
-    def GetCoordinateArray(self, listik=False):
+    def GetCoordinateArray(self, what='all', listik=False, *args, **kwargs):
         ''' Return the Nx3 array of individual atom coordinates. '''
-        return array([x.GetR() for x in self.atom_getter(listik=listik)])
+        return array([x.GetR() for x in self.atom_getter(what, listik, *args, **kwargs)])
 
     def SymateDistance(self, i, cell_shift=array([0.0,0.0,0.0])):
         symate = self.CreateSymate(i, cell_shift)
@@ -1715,19 +1715,20 @@ class pdbmolecule:
         return dict([(i,x) for (i,x) in self.environment(atomi, rmax, polaronly).items() if not self.same_residue(atomi,i)])
 
     def GetCoM(self, listik=False):
-        mo = self.GetMOVector(listik)
-        r = self.GetCoordinateArray(listik)
-        return sum(mo*r)/sum(mo)
+        mo = self.GetMOVector(listik=listik)
+        r = self.GetCoordinateArray(listik=listik)
+        return (mo*r.T).sum(1)/sum(mo)
 
     def Rgyration(self, listik=False):
-        mo = self.GetMOVector(listik).T
-        r = self.GetCoordinateArray(listik).T
+        mo = self.GetMOVector(listik=listik).T
+        r = self.GetCoordinateArray(listik=listik).T
         Rcenter = (mo*r).sum(1)/mo.sum()
         return sqrt(sum(mo*((r.T-Rcenter)**2).sum(1))/sum(mo))
 
-    def GetInertiaTensor(self, listik=False):
-        mo = self.GetMOVector(listik)
-        x, y, z = self.GetCoordinateArray(listik).T
+    def GetInertiaTensor(self, what='all', listik=False, *args, **kwargs):
+        listik = self.atom_lister(what, listik, *args, **kwargs)
+        mo = self.GetMOVector(listik=listik)
+        x, y, z = self.GetCoordinateArray(listik=listik).T
         return TInertia(mo, x, y, z)
 
     def WriteNeighborResidues(self, pdbFile, resid, rmax=4.0, self_exclude=False, header=None):
@@ -1773,7 +1774,7 @@ class pdbmolecule:
         return dict([(resid,pdbresidue(ratoms)) for resid,ratoms in residues.items()])
 
     def GetResidueNames(self, listik=False):
-        return sorted(set([a.get_res_name() for a in self.__ensure_atoms_(listik)]))
+        return dict([(a.resid(),a.get_res_name()) for a in self.__ensure_atoms_(listik)])
 
     def GetChains(self):
         ''' Returns the dictionary of chains with chain IDs as keys and
@@ -2643,10 +2644,15 @@ class pdbresidue:
         b = array([x.GetB() for x in self.origatoms])
         o = array([x.GetOccupancy() for x in self.origatoms])
         f = array([x.IsBackbone() for x in self.origatoms]).astype(int)
+        n_all, n_bb, n_sc = sum(o), sum(f*o), sum((1-f)*o)
         if mode == 'lin':
-            return [sum(b*o)/sum(o),sum(b*f*o)/sum(f*o),sum(b*(1-f)*o)/sum((1-f)*o)]
+            return [sum(b*o)/n_all if n_all else float('nan'),
+                    sum(b*f*o)/n_bb if n_bb else float('nan'),
+                    sum(b*(1-f)*o)/n_sc if n_sc else float('nan')]
         elif mode == 'rms':
-            return [sqrt(sum(o*b**2)/sum(o)),sqrt(sum(f*o*b**2)/sum(f*o)),sqrt(sum((1-f)*o*b**2)/sum((1-f)*o))]
+            return [sqrt(sum(o*b**2)/n_all) if n_all else float('nan'),
+                    sqrt(sum(f*o*b**2)/n_bb) if n_bb else float('nan'),
+                    sqrt(sum((1-f)*o*b**2)/n_sc) if n_sc else float('nan')]
         else:
             raise KeyError("Incorrect b-factor averaging mode '"+mode+"'")
 

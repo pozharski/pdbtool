@@ -18,8 +18,8 @@ parser.add_argument('--simple-output',
                     action='store_true',
                     help='Formatted output for easy parsing.')
 args = parser.parse_args()
-from .pdbtool import ReadPDBfile as read_pdb_file
-from .pdbtool import pdbmolecule
+from pdbtool import ReadPDBfile as read_pdb_file
+from pdbtool import pdbmolecule
 model1 = read_pdb_file(args.model1)
 model2 = read_pdb_file(args.model2)
 with open(args.segfile) as segf:
