@@ -17,6 +17,7 @@ defined by -a option. Allowed actions are:
                         sequence
     center-orient       Centers the molecule at the center of mass and
                         orients it along inertia axes
+    set-b-per-chain     Sets B-factors to chain average
 
 Program will also print various information extracted from the input 
 PDB file. Output is defined by -p option.  Currently supported choices 
@@ -56,7 +57,8 @@ parser.add_argument('-a', '--action', action='append',
 								'extract-ranges',
 								'tinertia-ranges',
 								'tinertia-slider',
-                                'center-orient',],
+                                'center-orient',
+                                'set-b-per-chain',],
                     default = [],
                     metavar = '', help='Action to perform')
 parser.add_argument('-p', '--outprint', action='append',
@@ -186,3 +188,9 @@ for whatodo in args.action:
             model.writePDB(args.outpath)
         else:
             print('This does not compute - rename chains but no chain pairs listed?')
+    elif whatodo == 'set-b-per-chain':
+        bavs = model.GetChainAverageBfactor()
+        remodel = model.copy()
+        for key,value in bavs.items():
+            remodel.SetBfactorValues(float(value), what='chid', chid=key)
+        remodel.writePDB(args.outpath)
