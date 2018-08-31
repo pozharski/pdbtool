@@ -87,5 +87,5 @@ class pdbase(object):
             codes = self.cur.execute('select distinct(pdbcode) from '+table).fetchall()
             if len(codes):
                 retcodes += list(zip(*codes)[0])
-        return retcodes
+        return list(set(retcodes))
 
