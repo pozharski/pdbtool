@@ -43,7 +43,7 @@ class pdbase(object):
         self.cur = self.conn.cursor()
         self.table_item_class = dict([(x[0], x[1].__class__) for x in self.tables])
     def fetch_processed_codes(self):
-        codes = zip(*self.cur.execute('select pdbcode from pdbcodes where status=1').fetchall())
+        codes = list(zip(*self.cur.execute('select pdbcode from pdbcodes where status=1').fetchall()))
         if len(codes):
             return codes[0]
         else:
