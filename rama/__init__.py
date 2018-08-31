@@ -28,6 +28,8 @@ class RamaReader(object):
         return "%2s%4d%s%s:%.2f:%.2f:%.2f:%s:%s" % (self.chain,self.resn,self.ac,self.resi,self.score,self.phi,self.psi,self.evaluation,self.type)
     def _extra_report(self):
         return ''
+    def resid(self):
+        return self.chain + str(self.resn).rjust(4) + self.ac
 
 from pdbminer import pdbase
 class rama_pdbase(pdbase):
