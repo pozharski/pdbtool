@@ -64,7 +64,7 @@ class pdbase(object):
         self.conn.commit()
         self.conn.close()
     def insert_new_item(self, table, code, item):
-        self.cur.execute('INSERT INTO '+table+' (pdbcode, ' + ', '.join(item.__dict__.keys())+') values ('+','.join(['?']*(1+len(item.__dict__)))+')', tuple([code]+item.__dict__.values()))
+        self.cur.execute('INSERT INTO '+table+' (pdbcode, ' + ', '.join(item.__dict__.keys())+') values ('+','.join(['?']*(1+len(item.__dict__)))+')', tuple([code]+list(item.__dict__.values())))
     def get_items(self, table, pdbcode=None):
         if pdbcode:
             cursor = self.cur.execute('select * from '+table+' where pdbcode=?',tuple([pdbcode]))

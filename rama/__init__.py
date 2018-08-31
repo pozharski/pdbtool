@@ -1,5 +1,9 @@
 #! /usr/bin/env python3
 
+# There should be a way to do this with relative imports
+import os, sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 class RamaReader(object):
     ''' Reads the lines produced by phenix.ramalyze '''
     def __init__(self, line=False, *args, **kwds):
@@ -25,6 +29,6 @@ class RamaReader(object):
     def _extra_report(self):
         return ''
 
-from ..pdbminer import pdbase
+from pdbminer import pdbase
 class rama_pdbase(pdbase):
     tables = [('rama', RamaReader(), '')]
