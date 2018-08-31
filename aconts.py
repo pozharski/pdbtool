@@ -108,7 +108,7 @@ class AtomContact:
             if not sameres:
                 self._aconts[key] = [x for x in self._aconts[key] if not self._model.same_residue(x[0], x[1])]
     def report(self):
-        for key, value in self._aconts.iteritems():
+        for key, value in self._aconts.items():
             print("%s %5d" % (key, len(value)))
             for i,j,r in value[:3]:
                 print("%-16s %-16s %.2f " % (self._model.GetAtomTitle(i), self._model.GetAtomTitle(j), r))
