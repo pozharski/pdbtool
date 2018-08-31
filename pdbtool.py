@@ -1331,7 +1331,7 @@ class pdbmolecule:
         elif whatlow == 'resid':
             return [i for i in listik if self.atoms[i].GetResID() == kwargs['resid']]
         elif whatlow == 'resnames':
-            return [i for i in atoms if self.atoms[i].get_res_name() in kwargs['resnames']]
+            return [i for i in listik if self.atoms[i].get_res_name() in kwargs['resnames']]
         elif whatlow == 'resids':
             return [i for i in listik if self.atoms[i].GetResID() in kwargs['resids']]
         elif whatlow == 'chid':
