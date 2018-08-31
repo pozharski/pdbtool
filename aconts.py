@@ -112,6 +112,11 @@ class AtomContact:
             print("%s %5d" % (key, len(value)))
             for i,j,r in value[:3]:
                 print("%-16s %-16s %.2f " % (self._model.GetAtomTitle(i), self._model.GetAtomTitle(j), r))
+    def key_report(self, key):
+        value = self._aconts.get(key)
+        if value is not None:
+            for i,j,r in value[:3]:
+                print("%-16s %-16s %.2f " % (self._model.GetAtomTitle(i), self._model.GetAtomTitle(j), r))
 
 class ACreader(object):
     ''' Reads the report lines produced by contact classes '''
