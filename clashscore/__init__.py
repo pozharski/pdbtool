@@ -20,7 +20,7 @@ class totalclashscore_pdbase(pdbase):
     tables = [('clashscore', TotalClashScoreReader(), '')]
     def process_code(self, code, fpath):
         phenix_cmd = "phenix.clashscore verbose=False "+fpath
-        exitcode, output = subprocess.getstatusoutput(full_cmd)
+        exitcode, output = subprocess.getstatusoutput(phenix_cmd)
         if not exitcode:
             self.insert_new_code(code)
             self.insert_new_item('clashscore',code,TotalClashScoreReader(output))
