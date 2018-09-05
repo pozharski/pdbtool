@@ -10,9 +10,6 @@ class TotalClashScoreReader(object):
             self.clashscore = float(line)
         else:
             self.clashscore = None
-        self._extra_reads(chunks)
-    def _extra_reads(self, chunks):
-        pass
     def report(self):
         return "%.2f" % (self.clashscore)
     def _extra_report(self):
