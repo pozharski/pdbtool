@@ -1,4 +1,4 @@
-from pdbtool import pdbmolecule
+from pdbtool import pdbmolecule, ReadPDBfile
 from scipy import exp, sqrt, log
 
 DAKERNEL_PARAMS = {
@@ -145,6 +145,18 @@ class ACreader(object):
 from pdbminer import pdbase
 class atom_contact_pdbase(pdbase):
     tables = [('atom_contacts', ACreader(), '')]
+    def process_code_rats(self, code, fpath, rats, rcutoff=4.0):
+        ac = aconts.AtomContact(ReadPDBfile(fpath))
+        ac.store_rats(rats, rcutoff=rcutoff, userkey='whatever')
+        self.insert_new_code(code)
+        things = [ACreader(x) for x in ac.key_report('whatever').strip('\n').split('\n') if len(x)]
+        if len(things):
+            for thing in things:
+                self.insert_new_item('atom_contacts',code,thing)
+            print("Processed "+code+"... (got %d)" % (len(things)))
+        else:
+            print("Processed "+code+"...")
+        self.code_lock(code)
 
 class HBreader(ACreader):
     def _extra_reads(self, chunks):
