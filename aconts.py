@@ -146,7 +146,7 @@ from pdbminer import pdbase
 class atom_contact_pdbase(pdbase):
     tables = [('atom_contacts', ACreader(), '')]
     def process_code_rats(self, code, fpath, rats, rcutoff=4.0):
-        ac = aconts.AtomContact(ReadPDBfile(fpath))
+        ac = AtomContact(ReadPDBfile(fpath))
         ac.store_rats(rats, rcutoff=rcutoff, userkey='whatever')
         self.insert_new_code(code)
         things = [ACreader(x) for x in ac.key_report('whatever').strip('\n').split('\n') if len(x)]

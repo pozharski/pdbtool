@@ -1244,7 +1244,7 @@ class pdbmolecule:
             coreXYZ = array([x.GetR() for x in kwargs['coreatoms']])
             return [x for x in set(atoms).difference(kwargs['coreatoms']) if (((coreXYZ-x.GetR())**2).sum(1)<=r2cutoff).any()]+kwargs['coreatoms']
         elif whatlow == 'rat':
-            return [x for x in atoms if x.rat in kwargs['rats']]
+            return [x for x in atoms if x.rat() in kwargs['rats']]
         elif whatlow == 'altconf':
             if kwargs.get('acvalue') is None:
                 return [x for x in atoms if x.HasAltConf()]
