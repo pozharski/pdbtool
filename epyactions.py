@@ -24,7 +24,7 @@ def rename_chains(args, model):
     else:
         print('This does not compute - rename chains but no chain pairs listed?')
 
-def rjust_resid:
+def rjust_resid(args, model):
     model.rjust_res_names()
     model.writePDB(args.outpath)
 
