@@ -24,10 +24,12 @@ class pisa_dbsres_pdbase(pdbminer.pdbase):
     tables = [('pisa_dbsres', pisa_dbsres_reader(), '')]
     def process_codes(self, fpath):
         with open(fpath) as fin:
+            precodes = self.fetch_processed_codes()
             for line in fin.readlines():
                 m = dbsres_ptrn.match(line)
                 if m:
                     code = m.groups()[0]
-                    self.insert_new_code(code)
-                    self.insert_new_item('pisa_dbsres', code, pisa_dbsres_reader(line))
-                    self.code_lock(code)
+                    if code not in precodes:
+                        self.insert_new_code(code)
+                        self.insert_new_item('pisa_dbsres', code, pisa_dbsres_reader(line))
+                        self.code_lock(code)
