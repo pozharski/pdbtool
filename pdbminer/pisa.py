@@ -10,8 +10,8 @@ dbsres_ptrn = re.compile("\s*\d*\s*(\S{4})\s*(\d*)\s*(\d*)(.{19})\s*(\d*\.\d*)\s
 
 class pisa_dbsres_reader(pdbminer.general_reader):
     ''' Reads the single value line produced by PBDe PISA search '''
-    def readline(self, line=None):
-        if line is None:
+    def readline(self, line=False):
+        if not line:
             chunks = [None, None, '', None, None, None]
         else:
             chunks = dbsres_ptrn.match(line).groups()[1:]
