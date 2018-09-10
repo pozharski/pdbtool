@@ -29,6 +29,24 @@ def make_create_statements(tables):
         retval.append(stmt)
     return retval
 
+class general_reader(object):
+    ''' Reads single value line produced and fills a class that can be then
+        stored in a pdbase. '''
+    def __init__(self, line=False, *args, **kwds):
+        self.readline(line)
+    def readline(self, line=False):
+        if line:
+            self.line = line
+        else:
+            self.line = None
+        self._extra_reads()
+    def _extra_reads(self):
+        pass
+    def report(self):
+        return self.line + self._extra_report()
+    def _extra_report(self):
+        return ''
+
 class pdbase(object):
     tables = []
     def __init__(self, sqlite_file):
