@@ -15,8 +15,7 @@ class pisa_dbsres_reader(pdbminer.general_reader):
             chunks = [None, None, '', None, None, None]
         else:
             chunks = dbsres_ptrn.match(line).groups()[1:]
-            chunks = [int(x) for x in chunks[:2]]+[chunks[2].strip()]+[float(x) for x in chunks[4:7]]
-            print(chunks)
+            chunks = [int(x) for x in chunks[:2]]+[chunks[2].strip()]+[float(x) for x in chunks[3:7]]
         self.mmsize, self.symnum, self.spacegroup, self.asa, self.bsa, self.deltaG = chunks
     def report(self):
         return "%6d%4d%19s%11.1f%11.1f%11.1f" % (self.mmsize, self.symnum, self.spacegroup, self.asa, self.bsa, self.deltaG)
