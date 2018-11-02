@@ -111,7 +111,7 @@ are:
     for action in args.action:
         epyactions.__getattribute__(action.replace('-','_').lower())(args,  model)
     for whatoprint in args.outprint:
-        epyactions.__getattribute__('print_'+action.replace('-','_').lower())(args,  model)
+        epyactions.__getattribute__('print_'+whatoprint.replace('-','_').lower())(args,  model)
 
 if __name__ == "__main__":
     main()
