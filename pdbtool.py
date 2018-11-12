@@ -1193,7 +1193,8 @@ class pdbmolecule:
             'altconf'           - atoms that have alternate conformer
                                     identifier.  If acvalue parameter is
                                     provided, only atoms that match it
-                                    are selected.
+                                    are selected (this could be an
+                                    inclusive list/string).
         '''
         whatlow = what.lower()
         atoms = self.GetListedAtoms(self.__ensure_listik_(listik))
@@ -1249,7 +1250,7 @@ class pdbmolecule:
             if kwargs.get('acvalue') is None:
                 return [x for x in atoms if x.HasAltConf()]
             else:
-                return [x for x in atoms if x.altLoc() == kwargs['acvalue']]
+                return [x for x in atoms if x.altLoc() in kwargs['acvalue']]
 
     def atom_lister(self, what='all', listik=False, *args, **kwargs):
         ''' Returns the list of atom indices based on the string defining the 
@@ -1298,7 +1299,8 @@ class pdbmolecule:
             'altconf'           - atoms that have alternate conformer
                                     identifier.  If acvalue parameter is
                                     provided, only atoms that match it
-                                    are selected.
+                                    are selected(this could be an
+                                    inclusive list/string).
         '''
         whatlow = what.lower()
         listik = self.__ensure_listik_(listik)
@@ -1354,7 +1356,7 @@ class pdbmolecule:
             if kwargs.get('acvalue') is None:
                 return [i for i in listik if self.atoms[i].HasAltConf()]
             else:
-                return [i for i in listik if self.atoms[i].altLoc() == kwargs['acvalue']]
+                return [i for i in listik if self.atoms[i].altLoc() in kwargs['acvalue']]
 
     def merge_listers(self, whats, listik=False, *args, **kwargs):
         '''
@@ -1429,13 +1431,6 @@ class pdbmolecule:
         labeled as alternate conformers.
         '''
         return [i for i,atom in self.__enumerate_atoms_(listik) if atom.HasAltConf()]
-
-    def ListAltConfTypes(self, listik=False):
-        '''
-        Returns the list of alternate conformer labels present in the
-        molecule.
-        '''
-        return sorted(set([self.atoms[i].GetAltLoc() for i in self.__ensure_listik_(listik) if self.atoms[i].HasAltConf()]))
 
     def ListChainSplit(self, listik=False):
         ''' Returns the dictionary of list of atoms from individual chains.'''
@@ -1975,6 +1970,19 @@ class pdbmolecule:
 
     def xyz(self, listik=False):
         return array([a.GetR() for a in self.atom_getter(listik=listik)])
+
+class vpdbmolecule(pdbmolecule):
+    '''
+    Extension of pdbmolecule class that adds a lot of verbose methods.
+    These are methods that can be replaced by a single line of code,
+    but are provided for convenience.
+    '''
+    def ListAltConfTypes(self, listik=False):
+        '''
+        Returns the list of alternate conformer labels present in the
+        molecule.
+        '''
+        return sorted(set([x.GetAltLoc() for x in self.atom_getter('altconf', listik=listik)]))
 
 class backbone:
     '''
