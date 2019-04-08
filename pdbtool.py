@@ -5,10 +5,10 @@ Includes pdbatom and pdbmolecule classes
 
 import gzip, urllib.request, os, random, math, sys, re, copy, logging, time
 
-import pdbnames, SpaceGroups
-from helper import progressbar
-from rotate import transform_list
-from tinertia import TInertia
+from . import pdbnames, SpaceGroups
+from .helper import progressbar
+from .rotate import transform_list
+from .tinertia import TInertia
 from scipy.linalg import eigh
 from scipy import   array, cos, sin, pi, radians, sqrt, dot, cross, \
                     randn, zeros, matrix, ones, floor, nonzero, \
@@ -66,7 +66,7 @@ def ReadPDBfile(pdbin, readcell=True):
     else:
         source = pdbin
     cell = None
-    for line in source:
+    for line in [x.decode() if type(x) is not str else x for x in source ]:
         if line[:5] == 'MODEL':
             modelN += 1
         if line[:6] == 'ATOM  ' or line[:6] == 'HETATM':
@@ -197,12 +197,12 @@ def WriteNMRstyle(models, name, header=None):
         fout.write('ENDMDL\n')
     fout.close()
 
-def cell_and_center(molecule, scale=2.0):
+def cell_and_center(molecule, scale=1.0, cushion=0.0):
     ''' The method returns the CRYST1 line for the P1 cell that could hold
         the entire molecule and the copy of the molecule with shifted
         coordinates that place it in the center. '''
     r = molecule.GetCoordinateArray()
-    gabarit = r.ptp(0)
+    gabarit = r.ptp(0) + 2*cushion
     abc = scale * gabarit
     retmol = molecule.copy()
     retmol.shift(0.5 * scale * gabarit - r.mean(0))
@@ -210,6 +210,9 @@ def cell_and_center(molecule, scale=2.0):
     celline += '%9.3f%9.3f%9.3f' % tuple(abc)
     celline += '  90.00  90.00  90.00 P 1                     \n'
     return (celline, retmol)
+
+def getatomid(atom):
+    return atom.atomid()
 
 class pdbcell:
 
@@ -444,6 +447,9 @@ class pdbatom:
         self.xyz = array([float(line[30:38]), float(line[38:46]), float(line[46:54])])
         self.uij = None
 
+    def __hash__(self):
+        return hash(repr(self))
+
     def __eq__(self, other):
         return (self.resid()==other.resid()) and (self.name()==other.name()) and (self.altLoc()==other.altLoc())
 
@@ -656,7 +662,7 @@ class pdbatom:
         return pdbnames.Is3Amino(self.resName())
 
     def IsHetero(self):
-        return pdbnames.IsHetero(self.resName)
+        return pdbnames.IsHetero(self.resName())
 
     def IsBackbone(self):
         ''' True if atom belongs to protein/DNA backbone, False otherwise. '''
@@ -780,6 +786,9 @@ class pdbmolecule:
         if self.modelN == 0:
             self.modelN = 1
         self.cartesian = True
+
+    def __len__(self):
+        return self.GetAtomNumber()
 
     def backbone(self):
         return backbone(self)
@@ -1239,7 +1248,7 @@ class pdbmolecule:
         elif whatlow == 'vicinity':
             r2cutoff = kwargs.get('rcutoff', 4.0)**2
             coreXYZ = array([x.GetR() for x in kwargs['coreatoms']])
-            return [x for x in set(atoms).difference(kwargs['coreatoms']) if (((coreXYZ-x.GetR())**2).sum(1)<=r2cutoff).any()]
+            return sorted([x for x in set(atoms).difference(kwargs['coreatoms']) if (((coreXYZ-x.GetR())**2).sum(1)<=r2cutoff).any()], key=getatomid)
         elif whatlow == 'sphere':
             r2cutoff = kwargs.get('rcutoff', 4.0)**2
             coreXYZ = array([x.GetR() for x in kwargs['coreatoms']])

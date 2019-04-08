@@ -2,7 +2,7 @@ from .download import pathcode_check
 from . import pdb_parser
 from .pdbtool import ReadPDBfile
 
-def get_model(pathcode):
+def get_model(pathcode, softcheck=True, active=True):
     '''
         Return pdbmolecule object.  If pathcode is an existing PDB file,
         it will be imported.  Otherwise, pathcode will be expected to
@@ -10,9 +10,11 @@ def get_model(pathcode):
         if file is not found, download will be attempted from the 
         Protein Data Bank.
     '''
-    fpath = pathcode_check(pathcode)
+    fpath = pathcode_check(pathcode, softcheck, active, return_stream=True)
     if fpath:
-        return ReadPDBfile(fpath)
+        model = ReadPDBfile(fpath)
+        fpath.close()
+        return model
     else:
         return None
 
