@@ -1,6 +1,12 @@
 from .download import pathcode_check
 from . import pdb_parser
-from .pdbtool import ReadPDBfile
+from .pdbtool import ReadPDBfile, pdbmolecule
+
+def atoms2model(atoms):
+    '''
+        Return a pdbmolecule object built from provided atoms.
+    '''
+    return pdbmolecule(atoms=atoms)
 
 def get_model(pathcode, softcheck=True, active=True):
     '''

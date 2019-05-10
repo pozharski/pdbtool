@@ -5,10 +5,10 @@ Includes pdbatom and pdbmolecule classes
 
 import gzip, urllib.request, os, random, math, sys, re, copy, logging, time
 
-from . import pdbnames, SpaceGroups
-from .helper import progressbar
-from .rotate import transform_list
-from .tinertia import TInertia
+import pdbnames, SpaceGroups
+from helper import progressbar
+from rotate import transform_list
+from tinertia import TInertia
 from scipy.linalg import eigh
 from scipy import   array, cos, sin, pi, radians, sqrt, dot, cross, \
                     randn, zeros, matrix, ones, floor, nonzero, \
@@ -651,7 +651,7 @@ class pdbatom:
         return self.resName() == 'HOH'
 
     def IsPolar(self):
-        return pdbnames.IsPolar(self.name())
+        return pdbnames.IsPolar(self.element().strip())
 
     def IsProteinBackbone(self):
         ''' True if atom belongs to protein backbone, False otherwise. '''
@@ -725,6 +725,8 @@ class pdbatom:
         return other.xyz-self.xyz
     def distance(self, other):
         return sqrt((self.dr(other)**2).sum())
+    def R2(self, other):
+        return (self.dr(other)**2).sum()
     def noise(self, xnoise=0.1, bnoise=0.1, occnoise=0.0):
         self.xyz += xnoise*randn(3)
         self.SetB(math.fabs(self.GetB()*random.gauss(1,bnoise)))
@@ -789,6 +791,9 @@ class pdbmolecule:
 
     def __len__(self):
         return self.GetAtomNumber()
+
+    def __iter__(self):
+        return self.atoms.__iter__()
 
     def backbone(self):
         return backbone(self)
@@ -1353,11 +1358,11 @@ class pdbmolecule:
             return listik
         elif whatlow == 'vicinity':
             r2cutoff = kwargs.get('rcutoff', 4.0)**2
-            coreXYZ = self.GetCoordinateArray(kwargs['corelist'])
+            coreXYZ = self.GetCoordinateArray(listik=kwargs['corelist'])
             return sorted([i for i in set(listik).difference(kwargs['corelist']) if (((coreXYZ-self.GetAtomR(i))**2).sum(1)<=r2cutoff).any()])
         elif whatlow == 'sphere':
             r2cutoff = kwargs.get('rcutoff', 4.0)**2
-            coreXYZ = self.GetCoordinateArray(kwargs['corelist'])
+            coreXYZ = self.GetCoordinateArray(listik=kwargs['corelist'])
             return sorted([i for i in set(listik).difference(kwargs['corelist']) if (((coreXYZ-self.GetAtomR(i))**2).sum(1)<=r2cutoff).any()]+kwargs['corelist'])
         elif whatlow == 'rat':
             return [i for i in listik if self.atoms[i].rat() in kwargs['rats']]
@@ -1383,7 +1388,7 @@ class pdbmolecule:
 
     def resid_lister(self, what='all', listik=False, *args, **kwargs):
         ''' Returs the list of residue IDs from an atom selection.
-            Selection parameters are the same as in atom_lister method.
+            Selection parameters are the same as in atom_getter method.
         '''
         return list(set([a.resid() for a in self.atom_getter(what, listik, *args, **kwargs)]))
 
@@ -1423,7 +1428,7 @@ class pdbmolecule:
     def get_residnames(self, what='all', listik=False, *args, **kwargs):
         ''' Returns a distionary with residue IDs as keys and residue
             names as values. Selection parameters are the same as in 
-            atom_lister method. '''
+            atom_getter method. '''
         return dict(set([(a.resid(),a.resName()) for a in self.atom_getter(what, listik, *args, **kwargs)]))
         
 
@@ -1747,7 +1752,7 @@ class pdbmolecule:
                 self.__headwrite_(fout, self.GetCrystLine())
             else:
                 self.__headwrite_(fout, header)
-            for atom in self.atom_lister('resids',resids=residlist):
+            for atom in self.atom_getter('resids',resids=residlist):
                 fout.write(atom.GetAtomRecord())
             fout.write('END   \n')
 

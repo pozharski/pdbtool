@@ -37,11 +37,12 @@ def extract_ranges(args, model):
 def tinertia_ranges(args, model):
     if args.ranges:
         ramodel = model.extract_range(args.ranges)
-        tin = ramodel.GetInertiaTensor(ramodel.atom_lister('backbone'))
+        tin = ramodel.GetInertiaTensor('backbone')
     else:
-        tin = model.GetInertiaTensor(model.atom_lister('backbone'))
+        tin = model.GetInertiaTensor('backbone')
     print(tin.report())
     print(tin.frame())
+    print(tin.anisou())
 
 def tinertia_slider(args, model):
     pass
