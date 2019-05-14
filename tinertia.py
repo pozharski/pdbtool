@@ -1,5 +1,5 @@
-from scipy import array, matrix, sqrt, arccos, degrees, pi
-from scipy.linalg import eig
+from scipy import array, matrix, sqrt, arccos, degrees, pi, diag, matmul
+from scipy.linalg import eig, inv
 
 class TInertia:
     '''
@@ -98,15 +98,15 @@ class TInertia:
         return retline
 
     def anisou(self, serid=1, aname='X', altloc=' ', rname='UNK', chid='X',rid=1,icode=' ',element='X',charge=''):
-        Ixyz = 1e4*self.Ixyz.getA()/self.mass
+        Exyz = matmul(self.vr.T,matmul(diag(self.abc**2),self.vr))
         retline  = 'ATOM  %5d %4s%1s%3s ' % (serid, aname,altloc,rname)
         retline += '%1s%4d%1s' % (chid,rid,icode)
         retline += '   %8.3f%8.3f%8.3f  1.00' % tuple(self.comass)
-        retline += '%6.2f' % (8*pi**2*(Ixyz[0][0]+Ixyz[1][1]+Ixyz[2][2])/1e8)
+        retline += '%6.2f' % (8*pi**2*(sum(self.abc)))
         retline += '          %2s%2s\n' % (element,charge)
         retline += 'ANISOU%5d %4s%1s%3s ' % (serid, aname,altloc,rname)
         retline += '%1s%4d%1s' % (chid,rid,icode)
-        retline += ' %7d%7d%7d' % (Ixyz[0][0],Ixyz[1][1],Ixyz[2][2])
-        retline += ' %7d%7d%7d  ' % (Ixyz[0][1],Ixyz[0][2],Ixyz[1][2])
+        retline += ' %7d%7d%7d' % (Exyz[0][0],Exyz[1][1],Exyz[2][2])
+        retline += '%7d%7d%7d  ' % (Exyz[0][1],Exyz[0][2],Exyz[1][2])
         retline += '    %2s%2s\n' % (element,charge)
         return retline

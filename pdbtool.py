@@ -1209,6 +1209,9 @@ class pdbmolecule:
                                     provided, only atoms that match it
                                     are selected (this could be an
                                     inclusive list/string).
+            'altgroup'          - atoms that match the atom specified 
+                                    in atom parameter.  Will include the
+                                    seed atom itself.
         '''
         whatlow = what.lower()
         atoms = self.GetListedAtoms(self.__ensure_listik_(listik))
@@ -1265,6 +1268,8 @@ class pdbmolecule:
                 return [x for x in atoms if x.HasAltConf()]
             else:
                 return [x for x in atoms if x.altLoc() in kwargs['acvalue']]
+        elif whatlow == 'altgroup':
+            return [x for x in atoms if kwargs['atom'].alt(x)]
 
     def atom_lister(self, what='all', listik=False, *args, **kwargs):
         ''' Returns the list of atom indices based on the string defining the 
@@ -1315,6 +1320,9 @@ class pdbmolecule:
                                     provided, only atoms that match it
                                     are selected(this could be an
                                     inclusive list/string).
+            'altgroup'          - atoms that match the atom specified 
+                                    in atomid parameter.  Will include 
+                                    the seed atom itself.
         '''
         whatlow = what.lower()
         listik = self.__ensure_listik_(listik)
@@ -1371,6 +1379,8 @@ class pdbmolecule:
                 return [i for i in listik if self.atoms[i].HasAltConf()]
             else:
                 return [i for i in listik if self.atoms[i].altLoc() in kwargs['acvalue']]
+        elif whatlow == 'altgroup':
+            return [i for i in listik if self.atoms[i].alt(kwargs['atomid'])]
 
     def merge_listers(self, whats, listik=False, *args, **kwargs):
         '''
