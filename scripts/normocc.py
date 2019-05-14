@@ -42,26 +42,31 @@ for atom in acatoms:
 
 print("Found %d groups of alternate conformer atoms" % len(acgroups))
 
-over_occupied = [g for g in acgroups if sum([a.GetOccupancy() for a in g])>1]
+gover_occupied = [g for g in acgroups if sum([a.GetOccupancy() for a in g])>1]
 
-for g in over_occupied:
+for g in gover_occupied:
     total_occupancy = sum([a.GetOccupancy() for a in g])
     for a in g:
         a.SetOccupancy(round(a.GetOccupancy()/total_occupancy,2))
 
-print("Found %d atom groups with occupancy>1" % len(over_occupied))
 
-resids = set([x.resid() for x in sum(over_occupied,[])])
-print("Problematic residues:")
-print('\n'.join(resids))
+if len(gover_occupied):
+    print("Found %d atom groups with occupancy>1" % len(gover_occupied))
+    resids = set([x.resid() for x in sum(gover_occupied,[])])
+    print("Problematic residues:\n---")
+    print('\n'.join(resids))
+    print('---')
 
-if args.outpath:
-    if not os.access(args.outpath, os.F_OK) or args.force_overwrite:
-        model.writePDB(args.outpath)
-        print("Corrected model saved as %s" % args.outpath)
-    else:
-        print("File %s already exists, skipping output" % args.outpath)
-
+if len(gover_occupied) or len(over_occupied):
+    if args.outpath:
+        if not os.access(args.outpath, os.F_OK) or args.force_overwrite:
+            model.writePDB(args.outpath)
+            print("Corrected model saved as %s" % args.outpath)
+        else:
+            print("File %s already exists, skipping output" % args.outpath)
+else:
+    if args.outpath:
+        print("No problems found, skipping output.")
 
 
 
