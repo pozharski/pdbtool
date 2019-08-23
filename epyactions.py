@@ -107,8 +107,9 @@ def print_resgem(args, model):
 
 def print_range_bs(args, model):
     if args.ranges:
-        ramodel = model.extract_range(args.ranges)
-        print("%6.2f" % ramodel.GetAverageBfactor())
+        print("%6.2f" % model.extract_range(args.ranges).GetAverageBfactor())
+    elif args.chids:
+        print("%6.2f" % model.extract_chains(args.chids).GetAverageBfactor())
     else:
         print("%6.2f" % model.GetAverageBfactor())
     
