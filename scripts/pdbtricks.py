@@ -43,6 +43,7 @@ are:
                         defined as all the non-water atoms within 
                         cutoff distance
     hbonds              Prints the list of hydrogen bonds
+    range_bs            Prints the average B-factor for a selected range
 
 --------------------------------------------------------------------------------
 
@@ -67,7 +68,7 @@ are:
                         default = [],
                         metavar = '', help='Action to perform')
     parser.add_argument('-p', '--outprint', action='append',
-                        choices = ['bvalue', 'chains', 'phipsi', 'bcontrast', 'resgem'],
+                        choices = ['bvalue', 'chains', 'phipsi', 'bcontrast', 'resgem', 'range_bs'],
                         default = [],
                         metavar='', help='Information to print out.')
     parser.add_argument('--resid', 

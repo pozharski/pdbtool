@@ -104,3 +104,11 @@ def print_resgem(args, model):
     print('----------- Impropers ----------- ')
     for x in m:
         print(x)
+
+def print_range_bs(args, model):
+    if args.ranges:
+        ramodel = model.extract_range(args.ranges)
+        print("%6.2f" % ramodel.GetAverageBfactor())
+    else:
+        print("%6.2f" % model.GetAverageBfactor())
+    
