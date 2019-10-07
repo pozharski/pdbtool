@@ -31,5 +31,33 @@ class pisa_dbsres_pdbase(pdbminer.pdbase):
                     code = m.groups()[0]
                     if code not in precodes:
                         self.insert_new_code(code)
-                        self.insert_new_item('pisa_dbsres', code, pisa_dbsres_reader(line))
-                        self.code_lock(code)
+                        reader = pisa_dbsres_reader(line)
+                        pisafolder = os.path.join(os.environ.get('PISA_PATH',os.path.join(os.getcwd(),'pisa_download')),str(reader.mmsize))
+                        if not os.access(pisafolder, os.F_OK):
+                            os.makedirs(pisafolder)
+                        pdbpath = os.path.join(pisafolder,'pisa_'+code+'.pdb')
+                        self.insert_new_item('pisa_dbsres', code, reader)
+                        if os.access(pdbpath, os.F_OK):
+                            print("Entry %s already downloaded" % (code))
+                            retval = 1
+                        else:
+                            print("Downloading entry %s... " % (code), end='')
+                            retval = int(self.pisa_download(code,pdbpath))
+                        if retval:
+                            print("success")
+                        else:
+                            print("failed")
+                        self.code_lock(retval)
+        self.commit()
+
+    def pisa_download(self, code, path):
+        ''' Downloads a model from PISA server. '''
+        from urllib.request import urlopen
+        try:
+            with urlopen('http://www.ebi.ac.uk/pdbe/pisa/cgi-bin/multimer.pdb?'+code+':1,1') as source:
+                with open(path, 'wb') as destination:
+                    destination.write(source.read())
+            return True
+        except:
+            sys.stderr.write("Download failed with %s exception: %s\n" % (str(sys.exc_info[0]),str(sys.exc_info[1])))
+            return False
