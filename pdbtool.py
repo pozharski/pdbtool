@@ -1807,11 +1807,12 @@ class pdbmolecule:
     def rename_chain(self, chid1, chid2, forced=False, what='all', listik=False, *args, **kwargs):
         ''' Changes chain ID for atoms in in chid1 to chid2.  Asserts
             that chid2 doesn't exist unless forced.'''
-        if not forced:
-            assert chid2 not in self.GetChainIDs(), 'Chain '+chid2+' already present, exiting.'
-        listik = self.atom_lister(what, listik, *args, **kwargs)
-        for atom in self.atom_getter('chid', listik, chid=chid1):
-            atom.SetChain(chid2)
+        if chid1 != chid2:
+            if not forced:
+                assert chid2 not in self.GetChainIDs(), 'Chain '+chid2+' already present, exiting.'
+            listik = self.atom_lister(what, listik, *args, **kwargs)
+            for atom in self.atom_getter('chid', listik, chid=chid1):
+                atom.SetChain(chid2)
 
     def __headwrite_(self, fout, header=None):
         if header is None:
