@@ -50,6 +50,31 @@ class pisa_dbsres_pdbase(pdbminer.pdbase):
                         self.code_lock(retval)
         self.commit()
 
+    def download_check(self, fDownload=False):
+        ''' Checks the database for downloaded structures. Needs standard
+            PISA database output file as fpath.  Use fDownload flag to
+            specify whether missing data should be donwladed. '''
+        for code in self.fetch_codes():
+            for item in self.get_items('pisa_dbsres', code):
+                pisafolder = os.path.join(os.environ.get('PISA_PATH',os.path.join(os.getcwd(),'pisa_download')),str(item.mmsize))
+                if not os.access(pisafolder, os.F_OK):
+                    os.makedirs(pisafolder)
+                pdbpath = os.path.join(pisafolder,'pisa_'+code+'.pdb')
+                if os.access(pdbpath, os.F_OK):
+                    print("Entry %s already downloaded, update status" % (code))
+                    self.code_lock(code)
+                else:
+                    if fDownload:
+                        print("Downloading entry %s... " % (code), end='')
+                        retval = int(self.pisa_download(code,pdbpath))
+                        if retval:
+                            print("success")
+                            self.code_lock(code)
+                        else:
+                            print("failed")
+                            self.code_unlock(code)
+        self.commit()
+
     def pisa_download(self, code, path):
         ''' Downloads a model from PISA server. '''
         from urllib.request import urlopen
@@ -61,3 +86,10 @@ class pisa_dbsres_pdbase(pdbminer.pdbase):
         except:
             sys.stderr.write("Download failed with %s exception: %s\n" % (str(sys.exc_info[0]),str(sys.exc_info[1])))
             return False
+
+    def get_path(self, code):
+        pdbpath = []
+        for item in self.get_items('pisa_dbsres', code):
+            pisafolder = os.path.join(os.environ.get('PISA_PATH',os.path.join(os.getcwd(),'pisa_download')),str(item.mmsize))
+            pdbpath.append(os.path.join(pisafolder,'pisa_'+code+'.pdb'))
+        return pdbpath

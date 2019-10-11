@@ -60,12 +60,14 @@ class pdbase(object):
         self.conn = sqlite3.connect(sqlite_file)
         self.cur = self.conn.cursor()
         self.table_item_class = dict([(x[0], x[1].__class__) for x in self.tables])
-    def fetch_processed_codes(self):
-        codes = list(zip(*self.cur.execute('select pdbcode from pdbcodes where status=1').fetchall()))
+    def fetch_codes(self, status=None):
+        codes = list(zip(*self.cur.execute('select pdbcode from pdbcodes'+('' if status is None else ' where status='+str(status))).fetchall()))
         if len(codes):
             return codes[0]
         else:
             return []
+    def fetch_processed_codes(self):
+        return self.fetch_codes(1)
     def filter_codes(self, codes):
         return sorted(set(codes).difference(self.fetch_processed_codes()))
     def insert_new_code(self, code):
@@ -76,6 +78,8 @@ class pdbase(object):
             pass
     def code_lock(self, code):
         self.cur.execute('UPDATE pdbcodes SET status=1 WHERE pdbcode=?', tuple([code]))
+    def code_unlock(self, code):
+        self.cur.execute('UPDATE pdbcodes SET status=0 WHERE pdbcode=?', tuple([code]))
     def commit(self):
         self.conn.commit()
     def close(self):
