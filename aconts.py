@@ -125,8 +125,11 @@ class ACreader(object):
     def __init__(self, line=False, *args, **kwds):
         self.readline(line)
     def readline(self, line=False):
-        if line:
+        if type(line) is str:
             chunks = line.split()
+        else:
+            chunks = line
+        if line:
             self.resn1, self.resid1, self.atom1 = chunks[:3]
             self.resn2, self.resid2, self.atom2 = chunks[3:6]
             self.d = float(chunks[6])
@@ -141,6 +144,10 @@ class ACreader(object):
         return "%3s %5s %-5s %3s %5s %-5s %7.2f " % (self.resn1, self.resid1,self.atom1, self.resn2, self.resid2, self.atom2, self.d) + self._extra_report()
     def _extra_report(self):
         return ''
+    def items(self):
+        return [self.resn1, self.resid1,self.atom1, self.resn2, self.resid2, self.atom2, self.d] + self._extra_items()
+    def _extra_items(self):
+        return []
 
 from pdbminer import pdbase
 class atom_contact_pdbase(pdbase):
@@ -169,6 +176,8 @@ class HBreader(ACreader):
             self.atomi1, self.atomi2 = [-1,-1]
     def _extra_report(self):
         return "%10.2f %10.2f %10.2f %10.2f" % (self.angle1, self.tor1, self.angle2, self.tor2)
+    def _extra_items(self):
+        return [self.angle1, self.tor1, self.angle2, self.tor2]
     def bonafide(self,d=None,a=None,t=None,sd=0.01,sa=1.0,st=10.0):
         if t is None:
             t = self.tor1
@@ -293,6 +302,15 @@ class HydrogenBond(AtomContact):
         for h,g,i,j,k,l,r,angle1,tor1,angle2,tor2 in self._aconts[self.__class__.__name__]:
             hbonds[self._model.GetAtomTitle(i)+'-'+self._model.GetAtomTitle(j)] = (i,j,r,angle1,tor1,self.da_pvalue(r,angle1))
         return hbonds
+    def get_item_sets(self):
+        itemsets = []
+        for h,g,i,j,k,l,r,angle1,tor1,angle2,tor2 in self._aconts[self.__class__.__name__]:
+            itemsets.append([self._model.GetAtomResidueName(i), self._model.GetAtomResID(i), self._model.GetAtomName(i),
+                             self._model.GetAtomResidueName(j), self._model.GetAtomResID(j), self._model.GetAtomName(j),
+                             r, angle1, tor1, angle2, tor2, i, j])
+        return itemsets
+    def get_readers(self, reader=HBreader):
+        return [reader(x) for x in self.get_item_sets()]
     def get_hbids(self):
         return [self._model.GetAtomTitle(x[2])+'-'+self._model.GetAtomTitle(x[3]) for x in self._aconts[self.__class__.__name__]]
     def conserved_hbonds(self, other):

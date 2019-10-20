@@ -1097,6 +1097,9 @@ class pdbmolecule:
         ''' Returns the vector of atom coordinates as array([x,y,z]). '''
         return self.atoms[i].GetR()
 
+    def GetAtomName(self, i):
+        return self.atoms[i].name()
+
     def GetAtomB(self, i):
         ''' Returns the atom temperature factor. '''
         return self.atoms[i].GetB()

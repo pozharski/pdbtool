@@ -20,11 +20,24 @@ args = parser.parse_args()
 
 from pdbminer import pisa
 from pdbtool import ReadPDBfile
+from aconts import AnionicToAnionic, hbond_pdbase, HBreader
 
 pisabase = pisa.pisa_dbsres_pdbase(args.sqlpisa)
 if args.do_checks:
     pisabase.download_check()
-code = pisabase.fetch_codes()[0]
-print(pisabase.get_path(code))
-mol = ReadPDBfile(pisabase.get_path(code))
-
+hpdbase = hbond_pdbase(args.sqlpath)
+for code in hpdbase.filter_codes(pisabase.fetch_codes()):
+    print("Processing %s..." % code)
+    molpath = pisabase.get_path(code)
+    mol = ReadPDBfile(molpath[0])
+    if mol.is_multi_model() or mol.GetAtomNumber()==0:
+        if mol.GetAtomNumber()==0:
+            print(code + ' is an empty structure.  Failed download?',file=sys.stderr)
+        else:
+            print(code + ' appears to be multi-model, skip', file=sys.stderr)
+    hb = AnionicToAnionic(mol)
+    hpdbase.insert_new_code(code)
+    for item in hb.get_readers():
+        hpdbase.insert_hb(code, item)
+    hpdbase.code_lock(code)
+    hpdbase.commit()
