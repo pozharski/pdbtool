@@ -11,9 +11,9 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 parser = ArgumentParser(formatter_class=RawDescriptionHelpFormatter,
                         description=headerhelp)
 parser.add_argument('--sqlpath', default='hbpisa.sqlite',
-                    help='HB database file')
+                    help='HB database file.  Defaults to hbpisa.sqlite.')
 parser.add_argument('--sqlpisa', default='pisa.sqlite',
-                    help='PISA database file')
+                    help='PISA database file.  Defaults to pisa.sqlite.')
 parser.add_argument('--hbtype', '-b',
                     help="Hydrogen bond type (mandatory).")
 parser.add_argument('--do-checks', action='store_true',
@@ -29,7 +29,7 @@ if args.hbtype is None:
 try:
     exec('from aconts import ' + args.hbtype + ' as HydroBonds')
 except ImportError:
-    sys.exit('Hydrogen bond type '+args.hbtype+' is not defined.  Please choose from the following list:\n'+'\n'.join(DAKERNEL_PARAMS.keys()))
+    sys.exit('Hydrogen bond type '+args.hbtype+' is not defined.  Please choose from the following list:\n'+'\n'.join(sorted(DAKERNEL_PARAMS.keys())))
     
 pisabase = pisa.pisa_dbsres_pdbase(args.sqlpisa)
 if args.do_checks:
