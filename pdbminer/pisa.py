@@ -93,3 +93,6 @@ class pisa_dbsres_pdbase(pdbminer.pdbase):
             pisafolder = os.path.join(os.environ.get('PISA_PATH',os.path.join(os.getcwd(),'pisa_download')),str(item.mmsize))
             pdbpath.append(os.path.join(pisafolder,'pisa_'+code+'.pdb'))
         return pdbpath
+
+    def get_pdbs(self, pdbcode=None):
+        return self.get_items('pisa_dbsres', pdbcode)

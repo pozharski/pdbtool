@@ -70,9 +70,9 @@ class pdbase(object):
         return self.fetch_codes(1)
     def filter_codes(self, codes):
         return sorted(set(codes).difference(self.fetch_processed_codes()))
-    def insert_new_code(self, code):
+    def insert_new_code(self, code, status=0):
         try:
-            self.cur.execute('INSERT INTO pdbcodes (pdbcode, status) VALUES (?,0)' , tuple([code]))
+            self.cur.execute('INSERT INTO pdbcodes (pdbcode, status) VALUES (?,?)' , tuple([code,status]))
             self.conn.commit()
         except sqlite3.IntegrityError:
             pass
