@@ -4,7 +4,7 @@ headerhelp = \
 ''' 
     HBFILTER selects a subset of contacts from a database
 '''
-import os, sys
+import os, sys, shutil
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
@@ -16,6 +16,8 @@ parser.add_argument('--sqlpisa', default='pisa.sqlite',
                     help='PISA database file.  Defaults to pisa.sqlite.')
 parser.add_argument('--sqlout', default='hbfiltered.sqlite',
                     help='Output HB database file.  Defaults to hbfiltered.sqlite.')
+parser.add_argument('--in-place', action='store_true',
+                    help='Modify the database file in place, use with caution')
 parser.add_argument('--mmsize',
                     help='Oligomerization number.  Could be a comma separated list.')
 parser.add_argument('--same-residue', action='store_true',
@@ -28,8 +30,11 @@ from pdbminer import pisa
 from aconts import hbond_pdbase
 
 pisabase = pisa.pisa_dbsres_pdbase(args.sqlpisa)
-hpdbase = hbond_pdbase(args.sqlpath)
-hpdbout = hbond_pdbase(args.sqlout)
+if args.in_place:
+    hpdbout = hbond_pdbase(args.sqlpath)
+else:
+    shutil.copyfile(args.sqlpath, args.sqlout)
+    hpdbout = hbond_pdbase(args.sqlout)
 
 pdbs = pisabase.get_pdbs()
 hbs = hpdbase.get_hbonds()
