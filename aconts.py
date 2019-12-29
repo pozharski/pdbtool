@@ -197,6 +197,15 @@ class hbond_pdbase(pdbase):
         self.insert_new_item('hydrogen_bonds', code, item)
     def get_hbonds(self, pdbcode=None):
         return self.get_items('hydrogen_bonds', pdbcode)
+    def get_hbond_number(self):
+        return self.get_item_number('hydrogen_bonds')
+    def delete_by_code(self, code):
+        self.delete_items('hydrogen_bonds', code)
+    def filter_same_residue(self, sameres=True):
+        if sameres:
+            self.execute('DELETE FROM hydrogen_bonds WHERE substr(resid1,2)!=substr(resid2,2)')
+        else:
+            self.execute('DELETE FROM hydrogen_bonds WHERE substr(resid1,2)=substr(resid2,2)')
 
 def read_contacts(fname, contact_label='OO_CONTACT', resreader=ACreader):
     with open(fname) as fin:

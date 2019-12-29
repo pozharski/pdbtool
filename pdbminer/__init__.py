@@ -84,9 +84,19 @@ class pdbase(object):
         self.conn.commit()
     def close(self):
         self.conn.commit()
+        self.execute("VACUUM")
         self.conn.close()
     def insert_new_item(self, table, code, item):
         self.cur.execute('INSERT INTO '+table+' (pdbcode, ' + ', '.join(item.__dict__.keys())+') values ('+','.join(['?']*(1+len(item.__dict__)))+')', tuple([code]+list(item.__dict__.values())))
+    def delete_items(self, table, code):
+        self.cur.execute('DELETE FROM '+table+' WHERE pdbcode=?', tuple([code]))
+    def execute(self, stmt, args=None):
+        if args:
+            self.cur.execute(stmt, args)
+        else:
+            self.cur.execute(stmt)
+    def get_item_number(self, table='pdbcodes'):
+        return self.cur.execute('select count(*) from '+table).fetchone()[0]
     def get_items(self, table, pdbcode=None):
         if pdbcode:
             cursor = self.cur.execute('select * from '+table+' where pdbcode=?',tuple([pdbcode]))

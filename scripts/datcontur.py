@@ -9,6 +9,9 @@ parser = ArgumentParser(formatter_class=RawDescriptionHelpFormatter,
                         description=headerhelp)
 parser.add_argument('--sqlpath', default='hbpisa.sqlite',
                     help='HB database file.  Defaults to hbpisa.sqlite.')
+parser.add_argument('--symmetric',
+                    action='store_true',
+                    help='Bonds are chemically symmetric so both directions should be included.')
 parser.add_argument('--dstep', type=float, default=0.02,
                     help='Distance step size.')
 parser.add_argument('--astep', type=float, default=1.0,
@@ -63,7 +66,11 @@ def da_pvalue(kp, d, a):
     return exp(-sqrt((d-xo)**2/sx+(a-yo)**2/sy))
 
 hpdb = hbond_pdbase(args.sqlpath)
-distance,angle,torsion=array([(x.d,x.angle1,x.tor1) for x in [x[1] for x in hpdb.get_hbonds()]]).T.astype(float)
+if args.symmetric:
+    distance,angle,torsion=array([(x.d,x.angle1,x.tor1) for x in [x[1] for x in hpdb.get_hbonds()]] +
+                                 [(x.d,x.angle2,x.tor2) for x in [x[1] for x in hpdb.get_hbonds()]]).T.astype(float)
+else:
+    distance,angle,torsion=array([(x.d,x.angle1,x.tor1) for x in [x[1] for x in hpdb.get_hbonds()]]).T.astype(float)
 redcount = ones(len(distance))
 
 ind = isfinite(distance+angle+torsion)

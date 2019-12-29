@@ -96,3 +96,7 @@ class pisa_dbsres_pdbase(pdbminer.pdbase):
 
     def get_pdbs(self, pdbcode=None):
         return self.get_items('pisa_dbsres', pdbcode)
+
+    def get_pdb_number(self):
+        return self.get_item_number('pisa_dbsres')
+        
