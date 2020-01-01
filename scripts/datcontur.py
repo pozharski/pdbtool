@@ -48,7 +48,7 @@ import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from aconts import hbond_pdbase
 
-from scipy import loadtxt, array, arange, histogram, unravel_index, isfinite, meshgrid, argmax, exp, sqrt, pi, ones
+from scipy import loadtxt, array, arange, histogram, unravel_index, isfinite, meshgrid, argmax, exp, sqrt, pi, ones, bincount
 from scipy.optimize import fmin
 from matplotlib.pyplot import subplot, contourf, contour, show, grid, figure, title, hist, xlabel, ylabel, gca
 
