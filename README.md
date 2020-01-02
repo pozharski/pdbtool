@@ -23,7 +23,6 @@ $ python3 -m venv pdbtool
 $ cd pdbtool
 $ . ./bin/activate
 $ git clone https://github.com/pozharski/pdbtool.git
-$ git checkout pdbtool3
 $ pip3 install --upgrade pip
 $ pip3 install scipy matplotlib
 ```
