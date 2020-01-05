@@ -122,7 +122,7 @@ s_t = [iqr(torsion[label==i],scale='normal') for i in range(args.kmeans)]
 for (i, c) in enumerate(array([[c_d,s_d],[c_a,s_a],[c_t,s_t]]).T):
     print("Cluster #%-2d: " % (i+1) + "%8.3f %8.3f "*len(c.T) % tuple(ravel(c.T)) + "%5.1f%%" % (freqs[i]))
     datvalues = ravel(array([c[0],2*c[1]**2]).T)
-    print("               (" + ','.join(['%.3f']*len(datvalues)) % (datvalues) + ")")
+    print("               (" + ','.join(['%.3f']*len(datvalues)) % tuple(datvalues) + ")")
 
 subplot(311)
 title('Distance-Angle', position=(0.05,0.95), ha='left', va='top', size='xx-large')
