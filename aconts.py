@@ -1,5 +1,8 @@
 from pdbtool import pdbmolecule, ReadPDBfile
-from scipy import exp, sqrt, log
+from scipy import exp, sqrt, log, pi
+from scipy.special import erfc
+
+TWOBYSQRTPI = 2 / sqrt(pi)
 
 DAKERNEL_PARAMS = {
     'TyrOHtoAnionic'            : (2.6164, 0.0257, 114.8657,  76.3537),
@@ -69,6 +72,9 @@ DAKERNEL_PARAMS = {
     'HistoHis'                  : (2.8847, 0.0810, 123.7450, 320.4533),
 }
 
+DATKERNEL_PARAMS = {
+    'AnionicToAnionic'          : [()]
+}
 
 def pcutoff(pv, hbtp):
     xo, sx = DAKERNEL_PARAMS[hbtp][:2]
@@ -76,6 +82,10 @@ def pcutoff(pv, hbtp):
 def da_pvalue(hbtp, d, a):
     xo, sx, yo, sy = DAKERNEL_PARAMS[hbtp]
     return exp(-sqrt((d-xo)**2/sx+(a-yo)**2/sy))
+def erf3(x):
+    return erfc(x) + TWOBYSQRTPI*x*exp(-x**2)
+def dat_pvalues(hbtp, d, a, t):
+    return [erf3(sqrt((d-xo)**2/sx+(a-yo)**2/sy+(t-zo)**2/sz)) for (xo,sx,yo,sy,zo,sz) in DATKERNEL_PARAMS[hbtp]]
 
 class AtomContact:
     '''
