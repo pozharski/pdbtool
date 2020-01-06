@@ -26,6 +26,14 @@ parser.add_argument('--not-same-residue', action='store_true',
                     help='Filter for identical residues forming a bond')
 parser.add_argument('--do-checks', action='store_true',
                     help='Check the PISA database integrity.')
+parser.add_argument('--pvalue', type=float,
+                    help='pvalue cutoff.  This requires that the type of hydrogen is specified.')
+parser.add_argument('--hbtype', '-b',
+                    help="Hydrogen bond type.")
+parser.add_argument('--symmetric',
+                    action='store_true',
+                    help='Bonds are chemically symmetric so both directions should be included.')
+
 args = parser.parse_args()
 
 from pdbminer import pisa
@@ -59,5 +67,12 @@ if args.same_residue:
     hpdbout.filter_same_residue()
 if args.not_same_residue:
     hpdbout.filter_same_residue(False)
+
+if args.pvalue:
+    if args.hbtype:
+        hpdbout.print_pvalues(args.hbtype, args.symmetric)
+    else:
+        print("Hydrogen bond type not specified, skippin p-value filtering.")
+        
 
 hpdbout.close()

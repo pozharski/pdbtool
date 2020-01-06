@@ -1,5 +1,5 @@
 from pdbtool import pdbmolecule, ReadPDBfile
-from scipy import exp, sqrt, log, pi
+from scipy import exp, sqrt, log, pi, cos, arccos, degrees, radians
 from scipy.special import erfc
 
 TWOBYSQRTPI = 2 / sqrt(pi)
@@ -73,7 +73,8 @@ DAKERNEL_PARAMS = {
 }
 
 DATKERNEL_PARAMS = {
-    'AnionicToAnionic'          : [()]
+    'AnionicToAnionic'          : [(2.559,0.041,118.383,309.864,179.909,1746.392),
+                                    (2.571,0.043,123.385,302.686,361.596,2410.010)]
 }
 
 def pcutoff(pv, hbtp):
@@ -85,7 +86,7 @@ def da_pvalue(hbtp, d, a):
 def erf3(x):
     return erfc(x) + TWOBYSQRTPI*x*exp(-x**2)
 def dat_pvalues(hbtp, d, a, t):
-    return [erf3(sqrt((d-xo)**2/sx+(a-yo)**2/sy+(t-zo)**2/sz)) for (xo,sx,yo,sy,zo,sz) in DATKERNEL_PARAMS[hbtp]]
+    return [erf3(sqrt((d-xo)**2/sx+(a-yo)**2/sy+abs(fmod(abs(t-zo)+180,360)**2/sz)) for (xo,sx,yo,sy,zo,sz) in DATKERNEL_PARAMS[hbtp]]
 
 class AtomContact:
     '''
@@ -216,6 +217,13 @@ class hbond_pdbase(pdbase):
             self.execute('DELETE FROM hydrogen_bonds WHERE substr(resid1,2)!=substr(resid2,2)')
         else:
             self.execute('DELETE FROM hydrogen_bonds WHERE substr(resid1,2)=substr(resid2,2)')
+    def print_pvalues(self, hbtp, fSym=False):
+        for hb in self.get_hbonds():
+            pv = dat_pvalues(hbtp,hb.d, hb.angle1, hb.tor1)
+            print("%5.2f %7.1f %7.1f %10.3g" % (hb.d, hb.angle1, hb.tor1) + "%10.3g "*len(pv) % tuple(pv))
+            if fSym:
+                pv = dat_pvalues(hbtp,hb.d, hb.angle2, hb.tor2)
+                print("%5.2f %7.1f %7.1f %10.3g" % (hb.d, hb.angle2, hb.tor2) + "%10.3g "*len(pv) % tuple(pv))
 
 def read_contacts(fname, contact_label='OO_CONTACT', resreader=ACreader):
     with open(fname) as fin:
