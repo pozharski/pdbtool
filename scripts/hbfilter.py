@@ -70,9 +70,9 @@ if args.not_same_residue:
 
 if args.pvalue:
     if args.hbtype:
-        hpdbout.print_pvalues(args.hbtype, args.pvalue, args.symmetric)
+        hpdbout.filter_pvalues(args.hbtype, args.pvalue, args.symmetric)
     else:
-        print("Hydrogen bond type not specified, skippin p-value filtering.")
+        print("Hydrogen bond type not specified, skipping p-value filtering.")
         
 
 hpdbout.close()
