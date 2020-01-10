@@ -90,6 +90,8 @@ class pdbase(object):
         self.cur.execute('INSERT INTO '+table+' (pdbcode, ' + ', '.join(item.__dict__.keys())+') values ('+','.join(['?']*(1+len(item.__dict__)))+')', tuple([code]+list(item.__dict__.values())))
     def delete_items(self, table, code):
         self.cur.execute('DELETE FROM '+table+' WHERE pdbcode=?', tuple([code]))
+    def delete_all(self, table):
+        self.cur.execute('DELETE FROM '+table)
     def execute(self, stmt, args=None):
         if args:
             self.cur.execute(stmt, args)

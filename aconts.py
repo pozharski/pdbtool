@@ -86,7 +86,7 @@ def da_pvalue(hbtp, d, a):
 def erf3(x):
     return erfc(x) + TWOBYSQRTPI*x*exp(-x**2)
 def dat_pvalues(hbtp, d, a, t):
-    return [erf3(sqrt((d-xo)**2/sx+(a-yo)**2/sy+abs(fmod(abs(t-zo)+180,360)**2/sz))) for (xo,sx,yo,sy,zo,sz) in DATKERNEL_PARAMS[hbtp]]
+    return [erf3(sqrt((d-xo)**2/sx+(a-yo)**2/sy+(fmod(abs(t-zo-180),360)-180)**2/sz)) for (xo,sx,yo,sy,zo,sz) in DATKERNEL_PARAMS[hbtp]]
 
 class AtomContact:
     '''
@@ -151,6 +151,11 @@ class ACreader(object):
         self._extra_reads(chunks)
     def _extra_reads(self, chunks):
         pass
+    def swap(self):
+        self.resn2, self.resid2, self.atom2, self.resn1, self.resid1, self.atom1 = self.resn1, self.resid1, self.atom1, self.resn2, self.resid2, self.atom2
+        self._extra_swap()
+    def _extra_swap(self):
+        pass
     def report(self):
         return "%3s %5s %-5s %3s %5s %-5s %7.2f " % (self.resn1, self.resid1,self.atom1, self.resn2, self.resid2, self.atom2, self.d) + self._extra_report()
     def _extra_report(self):
@@ -185,6 +190,8 @@ class HBreader(ACreader):
         else:
             self.angle1, self.tor1, self.angle2, self.tor2 = [float('nan')]*4
             self.atomi1, self.atomi2 = [-1,-1]
+    def _extra_swap(self):
+        self.atomi1, self.angle1, self.tor1, self.atomi2, self.angle2, self.tor2 = self.atomi2, self.angle2, self.tor2, self.atomi1, self.angle1, self.tor1
     def _extra_report(self):
         return "%10.2f %10.2f %10.2f %10.2f" % (self.angle1, self.tor1, self.angle2, self.tor2)
     def _extra_items(self):
@@ -228,6 +235,25 @@ class hbond_pdbase(pdbase):
                         pv = dat_pvalues(hbtp,hb.d, hb.angle2, hb.tor2)
                         if (array(pv)>pvalue).any():
                             print("%5.2f %7.1f %7.1f " % (hb.d, hb.angle2, hb.tor2) + "%10.3g "*len(pv) % tuple(pv))
+    def filter_pvalues(self, hbtp, pvalue=0.05, fSym=False):
+        hbs = self.get_hbonds()
+        print("Filter by p>%.3f" % (pvalue))
+        print("Database contains %d hydrogen bonds" % self.get_hbond_number())
+        self.delete_all('hydrogen_bonds')
+        for (code,hb) in hbs:
+            if hb.d and hb.angle1 and hb.tor1:
+                pv = dat_pvalues(hbtp, hb.d, hb.angle1, hb.tor1)
+                if (array(pv)>pvalue).any():
+                    self.insert_hb(code,hb)
+                    print("%5.2f %7.1f %7.1f " % (hb.d, hb.angle1, hb.tor1) + "%10.3g "*len(pv) % tuple(pv), end='\r')
+                elif fSym:
+                    if hb.angle2 and hb.tor2:
+                        pv = dat_pvalues(hbtp,hb.d, hb.angle2, hb.tor2)
+                        if (array(pv)>pvalue).any():
+                            hb.swap()
+                            self.insert_hb(code,hb)
+                            print("%5.2f %7.1f %7.1f " % (hb.d, hb.angle1, hb.tor1) + "%10.3g "*len(pv) % tuple(pv), end='\r')
+        print("%d hydrogen bonds passed the filter                    " % self.get_hbond_number())
 
 def read_contacts(fname, contact_label='OO_CONTACT', resreader=ACreader):
     with open(fname) as fin:
