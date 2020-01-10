@@ -49,7 +49,6 @@ class pisa_dbsres_pdbase(pdbminer.pdbase):
                             print("failed")
                         self.code_lock(retval)
         self.commit()
-
     def download_check(self, fDownload=False):
         ''' Checks the database for downloaded structures. Needs standard
             PISA database output file as fpath.  Use fDownload flag to
@@ -74,29 +73,31 @@ class pisa_dbsres_pdbase(pdbminer.pdbase):
                             print("failed")
                             self.code_unlock(code)
         self.commit()
-
     def pisa_download(self, code, path):
         ''' Downloads a model from PISA server. '''
         from urllib.request import urlopen
+        if self.get_mmsize(code)==1:
+            target = "https://files.rcsb.org/download/"+code+".pdb"
+        else:
+            target = "http://www.ebi.ac.uk/pdbe/pisa/cgi-bin/multimer.pdb?"+code+":1,1"
         try:
-            with urlopen('http://www.ebi.ac.uk/pdbe/pisa/cgi-bin/multimer.pdb?'+code+':1,1') as source:
+            with urlopen(target) as source:
                 with open(path, 'wb') as destination:
                     destination.write(source.read())
             return True
         except:
             sys.stderr.write("Download failed with %s exception: %s\n" % (str(sys.exc_info[0]),str(sys.exc_info[1])))
             return False
-
     def get_path(self, code):
         pdbpath = []
         for item in self.get_items('pisa_dbsres', code):
             pisafolder = os.path.join(os.environ.get('PISA_PATH',os.path.join(os.getcwd(),'pisa_download')),str(item.mmsize))
             pdbpath.append(os.path.join(pisafolder,'pisa_'+code+'.pdb'))
         return pdbpath
-
     def get_pdbs(self, pdbcode=None):
         return self.get_items('pisa_dbsres', pdbcode)
-
     def get_pdb_number(self):
         return self.get_item_number('pisa_dbsres')
+    def get_mmsize(self, pdbcode):
+        return int(self.get_items('pisa_dbsres',pdbcode)[0].mmsize)
         
