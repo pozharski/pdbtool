@@ -44,9 +44,10 @@ for code in hpdbase.filter_codes(pisabase.fetch_codes()):
             print(code + ' is an empty structure.  Failed download?',file=sys.stderr)
         else:
             print(code + ' appears to be multi-model, skip', file=sys.stderr)
-    hb = HydroBonds(mol)
-    hpdbase.insert_new_code(code)
-    for item in hb.get_readers():
-        hpdbase.insert_hb(code, item)
-    hpdbase.code_lock(code)
-    hpdbase.commit()
+    else:
+        hb = HydroBonds(mol)
+        hpdbase.insert_new_code(code)
+        for item in hb.get_readers():
+            hpdbase.insert_hb(code, item)
+        hpdbase.code_lock(code)
+        hpdbase.commit()
