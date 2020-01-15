@@ -6,7 +6,7 @@
 * [Setup](#setup)
 
 ## General info
-This project started as simple PDB (Protein Data Bank) file parser that could be used as a bridge to some more complicated analysis of protein strcutures.
+This project started as simple PDB (Protein Data Bank) file parser that could be used as a bridge to some more complicated analysis of protein structures.
 	
 ## Technologies
 Project is created with:
