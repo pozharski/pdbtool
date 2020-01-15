@@ -20,6 +20,8 @@ parser.add_argument('--in-place', action='store_true',
                     help='Modify the database file in place, use with caution')
 parser.add_argument('--mmsize',
                     help='Oligomerization number.  Could be a comma separated list.')
+parser.add_argument('--res2',
+                    help='Filter by second residue type')
 parser.add_argument('--same-residue', action='store_true',
                     help='Filter for identical residues forming a bond')
 parser.add_argument('--not-same-residue', action='store_true',
@@ -62,6 +64,12 @@ if args.mmsize is not None:
         hpdbout.commit()
         print("%8d codes still to remove" % (num2remove-i-1), end='\r')
     print("Reduced to %d bond entries" % hpdbout.get_hbond_number())
+
+if args.res2 is not None:
+    print("Only include %s as the second residue" % (args.res2))
+    print("Start with %d hydrogen bonds" % hpdbout.get_hbond_number())
+    hpdbout.filterby(res2=args.res2)
+    print("%d hydrogen bonds left after filtering" % hpdbout.get_hbond_number())
 
 if args.same_residue:
     hpdbout.filter_same_residue()

@@ -74,7 +74,13 @@ DAKERNEL_PARAMS = {
 
 DATKERNEL_PARAMS = {
     'AnionicToAnionic'          : [(2.559,0.041,118.383,309.864,179.909,1746.392),
-                                    (2.571,0.043,123.385,302.686,361.596,2410.010)]
+                                   (2.571,0.043,123.385,302.686,361.596,2410.010)],
+    'TyrOHtoAnionic'            : [(2.613,0.030,116.558,103.868,361.762,781.720),
+                                   (2.620,0.031,116.565,97.802,180.024,809.980)],
+    'TyrOHtoAspOD'              : [(2.616,0.029,116.343,87.408,180.229,751.473),
+                                   (2.614,0.028,116.103,100.761,361.988,758.558)],
+    'TyrOHtoGlnOE1'             : [(2.612,0.031,116.976,109.722,180.032,871.674),
+                                   (2.620,0.034,117.089,114.210,361.910,832.923)],
 }
 
 def pcutoff(pv, hbtp):
@@ -216,6 +222,7 @@ class hbond_pdbase(pdbase):
     def get_hbonds(self, pdbcode=None):
         return self.get_items('hydrogen_bonds', pdbcode)
     def get_hbond_number(self):
+        self.commit()
         return self.get_item_number('hydrogen_bonds')
     def delete_by_code(self, code):
         self.delete_items('hydrogen_bonds', code)
@@ -224,6 +231,9 @@ class hbond_pdbase(pdbase):
             self.execute('DELETE FROM hydrogen_bonds WHERE substr(resid1,2)!=substr(resid2,2)')
         else:
             self.execute('DELETE FROM hydrogen_bonds WHERE substr(resid1,2)=substr(resid2,2)')
+    def filterby(self, *args, **kwds):
+        if 'res2' in kwds:
+            self.execute('DELETE FROM hydrogen_bonds WHERE resn2!=?',tuple([kwds['res2']]))
     def print_pvalues(self, hbtp, pvalue=0.05, fSym=False):
         for (code,hb) in self.get_hbonds():
             if hb.d and hb.angle1 and hb.tor1:
