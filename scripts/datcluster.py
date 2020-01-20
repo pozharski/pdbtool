@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 headerhelp = \
 '''
-DATCONTUR reads a hb database that contains distance/angle/torsion columns
-and presents the results as distributions.
+DATCLUSTER reads a hb database that contains distance/angle/torsion columns
+and performs cluster analysis.
 '''
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 parser = ArgumentParser(formatter_class=RawDescriptionHelpFormatter,
@@ -43,20 +43,6 @@ from scipy import array, ones, bincount, isfinite, ravel
 from matplotlib.pyplot import figure, title, subplot, show, grid, xlabel, ylabel, plot
 from scipy.stats import iqr
 
-'''
-def f2gauss(xy, p):
-    A, xo, yo, sx, sy = p
-    return (A*exp(-(xy[0]-xo)**2/sx-(xy[1]-yo)**2/sy))
-def lsq2gauss(p, x, y, z, n):
-    return sum(((f2gauss((x,y),p)-z)**n).ravel())
-def lsqwgauss(p, x, y, z):
-    dfv = f2gauss((x,y),p) - z
-    w = z
-    return sum((w*(dfv**2)).ravel())
-def da_pvalue(kp, d, a):
-    xo, sx, yo, sy = kp
-    return exp(-sqrt((d-xo)**2/sx+(a-yo)**2/sy))
-'''
 
 hpdb = hbond_pdbase(args.sqlpath)
 if args.symmetric:
