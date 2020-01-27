@@ -1,8 +1,10 @@
 from pdbtool import pdbmolecule, ReadPDBfile
 from scipy import exp, sqrt, log, pi, fmod, array
 from scipy.special import erfc
+from scipy.optimize import fsolve
 
 TWOBYSQRTPI = 2 / sqrt(pi)
+FOURBYTHREESQRTPI = 4 / 3 / sqrt(pi)
 
 DAKERNEL_PARAMS = {
     'TyrOHtoAnionic'            : (2.6164, 0.0257, 114.8657,  76.3537),
@@ -83,6 +85,8 @@ DATKERNEL_PARAMS = {
                                    (2.620,0.034,117.089,114.210,361.910,832.923)],
     'TyrOHtoCarboxamideO'       : [(2.683,0.021,114.899,64.139,181.838,514.651),
                                    (2.679,0.023,115.001,64.627,362.605,572.587)],
+    'TyrOHtoTyrOH'              : [(2.756,0.076,116.737,202.242,178.847,2523.879),
+                                   (2.751,0.077,116.970,221.608,357.934,3877.188)],
 }
 
 def pcutoff(pv, hbtp):
@@ -95,6 +99,14 @@ def erf3(x):
     return erfc(x) + TWOBYSQRTPI*x*exp(-x**2)
 def dat_pvalues(hbtp, d, a, t):
     return [erf3(sqrt((d-xo)**2/sx+(a-yo)**2/sy+(fmod(abs(t-zo-180),360)-180)**2/sz)) for (xo,sx,yo,sy,zo,sz) in DATKERNEL_PARAMS[hbtp]]
+def erfinv3(p):
+    def f3(x,p):
+        return erf3(x)-p
+    return fsolve(f3,1,p)
+def sigmap(s,p):
+    x = erfinv3(p)
+    return s / (1-p-FOURBYTHREESQRTPI*x**3*exp(-x**2))
+
 
 class AtomContact:
     '''
@@ -266,6 +278,7 @@ class hbond_pdbase(pdbase):
                             self.insert_hb(code,hb)
                             print("%5.2f %7.1f %7.1f " % (hb.d, hb.angle1, hb.tor1) + "%10.3g "*len(pv) % tuple(pv), end='\r')
         print("%d hydrogen bonds passed the filter                    " % self.get_hbond_number())
+        self.commit()
 
 def read_contacts(fname, contact_label='OO_CONTACT', resreader=ACreader):
     with open(fname) as fin:

@@ -33,11 +33,13 @@ parser.add_argument('--weighted', action='store_true',
                     help='Weight distribution by redundancies (input file should be processed by SEQFILTER')
 parser.add_argument('--title', default='DAT clusters',
                     help='Title of the figure.')
+parser.add_argument('--hbtype', '-b',
+                    help="Hydrogen bond type.  If provided, corresponding DAT kernel parameters will be used as starting cluster centroids.")
 args = parser.parse_args()
 
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from aconts import hbond_pdbase
+from aconts import hbond_pdbase, DATKERNEL_PARAMS
 
 from scipy import array, ones, bincount, isfinite, ravel
 from matplotlib.pyplot import figure, title, subplot, show, grid, xlabel, ylabel, plot
@@ -96,8 +98,14 @@ else:
 figure(args.title)
 
 from scipy.cluster.vq import kmeans2, whiten
-z = whiten(array([distance,angle,torsion]).T)
-centroid, label = kmeans2(z, args.kmeans, minit='points')
+if args.hbtype:
+    d0,a0,t0=array(DATKERNEL_PARAMS[args.hbtype]).T[[0,2,4]].tolist()
+    Ndat = len(d0)
+    z = whiten(array([d0+distance.tolist(),a0+angle.tolist(),t0+torsion.tolist()]).T)
+    centroid, label = kmeans2(z[Ndat:], z[:Ndat], minit='matrix')
+else:
+    z = whiten(array([distance,angle,torsion]).T)
+    centroid, label = kmeans2(z, args.kmeans, minit='points')
 freqs = 100*bincount(label)/len(label)
 c_d = [distance[label==i].mean() for i in range(args.kmeans)]
 c_a = [angle[label==i].mean() for i in range(args.kmeans)]
