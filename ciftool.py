@@ -131,9 +131,12 @@ class pdbentry:
                     #print('----------')
                     #print(readout[0])
                     #print('\n'.join(["%s: %s" % (k,v) for k,v in self.datablocks[readout[0]].items()]))
+
+    def __len__(self):
+        return len(self.arrays['atom_site']['id'])
         
 if __name__ == '__main__':
     import sys
     with open(sys.argv[1]) as fin:
         x = pdbentry(fin)
-        print(x.datablocks.keys())
+        print(len(x))
