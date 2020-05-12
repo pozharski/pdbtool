@@ -1,4 +1,5 @@
 from helper import range_check
+import numpy as np
 
 def strip_waters(args, model):
     model.WriteAtomList(args.outpath, model.atom_lister('notwater'), 'cell')
@@ -79,7 +80,7 @@ def print_phipsi(args, model):
         print("%6s %8.2f %8.2f" % (resid, phi.get(resid, float('nan')), psi .get(resid, float('nan'))))
 
 def print_bcontrast(args, model):
-    resids = [y for y in set([x.resid() for x in model.atoms]) if array([range_check(int(y[1:-1]),x) for x in ranges.get(y[0],[])]).any()]
+    resids = [y for y in set([x.resid() for x in model.atoms]) if np.array([range_check(int(y[1:-1]),x) for x in args.ranges.get(y[0],[])]).any()]
     listik = model.atom_lister('resids', resids=resids)
     print('%d atoms selected for analysis\n<B>sel = %.2f' % (len(listik), model.GetAverageBfactor(listik=listik)))
     vicatoms = model.atom_lister('vicinity', model.atom_lister('notwater'), corelist=listik, rcutoff=args.rcutoff)
