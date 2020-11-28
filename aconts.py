@@ -286,7 +286,7 @@ class hbond_pdbase(pdbase):
         print("Remove false bonds due to metal sites")
         print("Database contains %d hydrogen bonds" % self.get_hbond_number())
         self.delete_all('hydrogen_bonds')
-        for code, items in hbs:
+        for code, items in hbs.items():
             print("Processing %s..." % code)
             molpath = pisabase.get_path(code)
             mol = ReadPDBfile(molpath[0])
