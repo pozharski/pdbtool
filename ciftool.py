@@ -4,6 +4,12 @@ CIF-file reading module.
 
 import re
 from collections import OrderedDict
+from binarrays import read_byte, read_integer, read_float, read_char, read_shortint, read_cints, read_fints, read_shortuint
+from binarrays import write_char, write_integer, write_float, write_byte, write_shortint, write_cint, write_fint, write_shortuint
+
+def binwrite_char(fout, value):
+    write_integer(fout, [len(value)])
+    write_char(fout, value)
 
 class text_reader:
     '''
@@ -131,12 +137,16 @@ class pdbentry:
                     #print('----------')
                     #print(readout[0])
                     #print('\n'.join(["%s: %s" % (k,v) for k,v in self.datablocks[readout[0]].items()]))
-
     def __len__(self):
         return len(self.arrays['atom_site']['id'])
+    def binwrite(self, fname):
+        with open(fname,'wb') as fout:
+            write_char(fout, 'BCIF')
+            write_integer(fout, [1])
+            binwrite_char(fout,self.code)
         
 if __name__ == '__main__':
     import sys
     with open(sys.argv[1]) as fin:
         x = pdbentry(fin)
-        print(len(x))
+        print(x.binwrite(sys.argv[2]))

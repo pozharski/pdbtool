@@ -35,6 +35,8 @@ parser.add_argument('--hbtype', '-b',
 parser.add_argument('--symmetric',
                     action='store_true',
                     help='Bonds are chemically symmetric so both directions should be included.')
+parser.add_argument('--no-metals', action='store_true',
+                    help='Filter out false bonds that result from metal binding sites')
 
 args = parser.parse_args()
 
@@ -42,6 +44,8 @@ from pdbminer import pisa
 from aconts import hbond_pdbase
 
 pisabase = pisa.pisa_dbsres_pdbase(args.sqlpisa)
+if args.do_checks:
+    pisabase.download_check()
 if args.in_place:
     hpdbout = hbond_pdbase(args.sqlpath)
 else:
@@ -49,6 +53,17 @@ else:
     hpdbout = hbond_pdbase(args.sqlout)
 
 #hbs = hpdbase.get_hbonds()
+
+if args.no_metals:
+    for code in hpdbase.fetch_processed_codes():
+        print("Processing %s..." % code)
+        molpath = pisabase.get_path(code)
+        mol = ReadPDBfile(molpath[0])
+        metals = mol.atom_getter('metals')
+        if len(metals):
+            pass
+        else:
+            print("No metals found, skip")
 
 if args.mmsize is not None:
     mmsizes = [int(x) for x in args.mmsize.split(',')]

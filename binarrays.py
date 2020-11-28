@@ -70,6 +70,8 @@ def write_array(fout, values, astype='B'):
     try:
         var.extend(values)
     except TypeError:
+        print(var)
+        print(values)
         var.append(values)
     var.tofile(fout)
 
