@@ -667,7 +667,7 @@ class pdbatom:
 
     def IsMetal(self):
         ''' True if atom is a metal (as defined in pdbnames). '''
-        return pdbnames.IsMetal(self.name())
+        return pdbnames.IsMetal(self.resName().strip())
 
     def IsBackbone(self):
         ''' True if atom belongs to protein/DNA backbone, False otherwise. '''
