@@ -55,7 +55,7 @@ else:
 #hbs = hpdbase.get_hbonds()
 
 if args.no_metals:
-	hpdbout.remove_metals(pisabase)
+    hpdbout.remove_metals(pisabase)
 
 if args.mmsize is not None:
     mmsizes = [int(x) for x in args.mmsize.split(',')]

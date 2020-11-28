@@ -98,7 +98,7 @@ class pdbase(object):
         else:
             self.cur.execute(stmt)
     def executemany(self, stmt, args):
-		self.cur.executemany(stmt, args)
+        self.cur.executemany(stmt, args)
     def get_item_number(self, table='pdbcodes'):
         return self.cur.execute('select count(*) from '+table).fetchone()[0]
     def get_items(self, table, pdbcode=None):
@@ -117,18 +117,18 @@ class pdbase(object):
             else:
                 items.append((values[0], item))
         return items
-	def get_items_codetree(self,  table):
-		cursor = self.cur.execute('select * from '+table)
-		keys = [t[0] for t in cursor.description][1:]
+    def get_items_codetree(self,  table):
+        cursor = self.cur.execute('select * from '+table)
+        keys = [t[0] for t in cursor.description][1:]
         items = {}
         itemclass = self.table_item_class[table]
         for values in cursor.fetchall():
             item = itemclass()
             item.__dict__ = dict(zip(*(keys,values[1:])))
             if values[0] in items:
-				items[values[0]].append(item)
-			else:
-				items[values[0]] = [item]
+                items[values[0]].append(item)
+            else:
+                items[values[0]] = [item]
         return items
             
     def get_present_codes(self):

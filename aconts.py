@@ -236,7 +236,7 @@ class hbond_pdbase(pdbase):
     def get_hbonds(self, pdbcode=None):
         return self.get_items('hydrogen_bonds', pdbcode)
     def get_hbond_codetree(self):
-		return self.get_items_codetree('hydrogen_bonds')
+        return self.get_items_codetree('hydrogen_bonds')
     def get_hbond_number(self):
         self.commit()
         return self.get_item_number('hydrogen_bonds')
@@ -281,23 +281,23 @@ class hbond_pdbase(pdbase):
                             print("%5.2f %7.1f %7.1f " % (hb.d, hb.angle1, hb.tor1) + "%10.3g "*len(pv) % tuple(pv), end='\r')
         print("%d hydrogen bonds passed the filter                    " % self.get_hbond_number())
         self.commit()
-	def remove_metals(self, pisabase):
-		hbs = self.get_hbond_codetree()
+    def remove_metals(self, pisabase):
+        hbs = self.get_hbond_codetree()
         print("Remove false bonds due to metal sites")
         print("Database contains %d hydrogen bonds" % self.get_hbond_number())
-		self.delete_all('hydrogen_bonds')
-		for code, items in hbs:
-			print("Processing %s..." % code)
-			molpath = pisabase.get_path(code)
-			mol = ReadPDBfile(molpath[0])
-			metals = mol.atom_lister('metal')
-			hbis = set(sum([[x['atomi1'],x['atomi2']] for x in items], start=[]))
-			nearmetals = set(mol.atom_lister('vicinity', listik=hbis, corelist=metals))
-			for item in items:
-				if not len(nearmetals.intersection([item['atomi1'],item['atomi2']])):
-					self.insert_hb(code,item)
-				else:
-					print("Removed %s )
+        self.delete_all('hydrogen_bonds')
+        for code, items in hbs:
+            print("Processing %s..." % code)
+            molpath = pisabase.get_path(code)
+            mol = ReadPDBfile(molpath[0])
+            metals = mol.atom_lister('metal')
+            hbis = set(sum([[x['atomi1'],x['atomi2']] for x in items], start=[]))
+            nearmetals = set(mol.atom_lister('vicinity', listik=hbis, corelist=metals))
+            for item in items:
+                if not len(nearmetals.intersection([item['atomi1'],item['atomi2']])):
+                    self.insert_hb(code,item)
+                else:
+                    print("Removed %s )
         print("%d hydrogen bonds passed the filter                    " % self.get_hbond_number())
         self.commit()
 
