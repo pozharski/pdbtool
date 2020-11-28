@@ -662,7 +662,12 @@ class pdbatom:
         return pdbnames.Is3Amino(self.resName())
 
     def IsHetero(self):
+        ''' True if atom is a heteroatom (i.e. not protein or water). '''
         return pdbnames.IsHetero(self.resName())
+
+    def IsMetal(self):
+        ''' True if atom is a metal (as defined in pdbnames). '''
+        return pdbnames.IsMetal(self.name())
 
     def IsBackbone(self):
         ''' True if atom belongs to protein/DNA backbone, False otherwise. '''
@@ -1173,6 +1178,7 @@ class pdbmolecule:
             'notwater'          - other than water molecules
             'polar'             - polar atoms
             'hetero'            - heteroatoms
+            'metal'             - metals
             'element_X'         - chemical element (X = H,C,O,N,P,CA, etc)
             'name_X'            - atom name (X = atom name)
             'names'             - atom from a list of names , pass the
@@ -1232,6 +1238,8 @@ class pdbmolecule:
             return [x for x in atoms if x.IsPolar()]
         elif whatlow == 'hetero':
             return [x for x in atoms if x.IsHetero()]
+        elif whatlow == 'metal':
+            return [x for x in atoms if x.IsMetal()]
         elif whatlow[:8] == 'element_':
             return [x for x in atoms if x.GetElement() == what[8:]]
         elif whatlow[:5] == 'name_':
@@ -1285,6 +1293,7 @@ class pdbmolecule:
             'notwater'          - other than water molecules
             'polar'             - polar atoms
             'hetero'            - heteroatoms
+            'metal'             - metals
             'element_X'         - chemical element (X = H,C,O,N,P,CA, etc)
             'name_X'            - atom name (X = atom name)
             'names'             - atom from a list of names, pass the
@@ -1343,6 +1352,8 @@ class pdbmolecule:
             return [i for i in listik if self.atoms[i].IsPolar()]
         elif whatlow == 'hetero':
             return [i for i in listik if self.atoms[i].IsHetero()]
+        elif whatlow == 'metal':
+            return [i for i in listik if self.atoms[i].IsMetal()]
         elif whatlow[:8] == 'element_':
             return [i for i in listik if self.atoms[i].GetElement() == what[8:]]
         elif whatlow[:5] == 'name_':

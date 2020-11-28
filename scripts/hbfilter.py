@@ -20,6 +20,8 @@ parser.add_argument('--in-place', action='store_true',
                     help='Modify the database file in place, use with caution')
 parser.add_argument('--mmsize',
                     help='Oligomerization number.  Could be a comma separated list.')
+parser.add_argument('--no-metals', action='store_true',
+                    help='Filter out false hydrogen bonds that are due to metal centers.')
 parser.add_argument('--res2',
                     help='Filter by second residue type')
 parser.add_argument('--same-residue', action='store_true',
@@ -29,7 +31,7 @@ parser.add_argument('--not-same-residue', action='store_true',
 parser.add_argument('--do-checks', action='store_true',
                     help='Check the PISA database integrity.')
 parser.add_argument('--pvalue', type=float,
-                    help='pvalue cutoff.  This requires that the type of hydrogen is specified.')
+                    help='pvalue cutoff.  This requires that the type of hydrogen bond is specified.')
 parser.add_argument('--hbtype', '-b',
                     help="Hydrogen bond type.")
 parser.add_argument('--symmetric',
@@ -42,6 +44,8 @@ from pdbminer import pisa
 from aconts import hbond_pdbase
 
 pisabase = pisa.pisa_dbsres_pdbase(args.sqlpisa)
+if args.do_checks:
+    pisabase.download_check()
 if args.in_place:
     hpdbout = hbond_pdbase(args.sqlpath)
 else:
@@ -49,6 +53,9 @@ else:
     hpdbout = hbond_pdbase(args.sqlout)
 
 #hbs = hpdbase.get_hbonds()
+
+if args.no_metals:
+	hpdbout.remove_metals(pisabase)
 
 if args.mmsize is not None:
     mmsizes = [int(x) for x in args.mmsize.split(',')]
