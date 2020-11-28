@@ -292,7 +292,7 @@ class hbond_pdbase(pdbase):
             mol = ReadPDBfile(molpath[0])
             metals = mol.atom_lister('metal')
             print('Metals: ',len(metals))
-            hbis = set(sum([[x.atomi1,x.atomi2] for x in items], start=[]))
+            hbis = set(sum([[x.atomi1,x.atomi2] for x in items], []))
             nearmetals = set(mol.atom_lister('vicinity', listik=hbis, corelist=metals))
             print('Coordinated atoms: ',len(nearmetals))
             for item in items:
