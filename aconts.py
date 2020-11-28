@@ -292,14 +292,18 @@ class hbond_pdbase(pdbase):
             mol = ReadPDBfile(molpath[0])
             metals = mol.atom_lister('metal')
             print('Metals: ',len(metals))
-            hbis = set(sum([[x.atomi1,x.atomi2] for x in items], []))
-            nearmetals = set(mol.atom_lister('vicinity', listik=hbis, corelist=metals))
-            print('Coordinated atoms: ',len(nearmetals))
-            for item in items:
-                if not len(nearmetals.intersection([item.atomi1,item.atomi2])):
-                    self.insert_hb(code,item)
-                else:
-                    print("Removed %s %31s  " % (code, item.report()))
+            if len(metals):
+				hbis = set(sum([[x.atomi1,x.atomi2] for x in items], []))
+				nearmetals = set(mol.atom_lister('vicinity', listik=hbis, corelist=metals))
+				print('Coordinated atoms: ',len(nearmetals))
+				for item in items:
+					if not len(nearmetals.intersection([item.atomi1,item.atomi2])):
+						self.insert_hb(code,item)
+					else:
+						print("Removed %s %31s  " % (code, item.report()))
+			else:
+				for item in items:
+					self.insert_hb(code,item)
         print("%d hydrogen bonds passed the filter                    " % self.get_hbond_number())
         self.commit()
 
