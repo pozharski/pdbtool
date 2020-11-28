@@ -291,10 +291,10 @@ class hbond_pdbase(pdbase):
             molpath = pisabase.get_path(code)
             mol = ReadPDBfile(molpath[0])
             metals = mol.atom_lister('metal')
-            hbis = set(sum([[x['atomi1'],x['atomi2']] for x in items], start=[]))
+            hbis = set(sum([[x.atomi1,x.atomi2] for x in items], start=[]))
             nearmetals = set(mol.atom_lister('vicinity', listik=hbis, corelist=metals))
             for item in items:
-                if not len(nearmetals.intersection([item['atomi1'],item['atomi2']])):
+                if not len(nearmetals.intersection([item.atomi1,item.atomi2])):
                     self.insert_hb(code,item)
                 else:
                     print("Removed %s %31s  " % (code, item.report()), end='\r')
