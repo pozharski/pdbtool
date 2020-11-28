@@ -297,7 +297,7 @@ class hbond_pdbase(pdbase):
                 if not len(nearmetals.intersection([item['atomi1'],item['atomi2']])):
                     self.insert_hb(code,item)
                 else:
-                    print("Removed %s )
+                    print("Removed %s %31s  " % (code, item.report()), end='\r')
         print("%d hydrogen bonds passed the filter                    " % self.get_hbond_number())
         self.commit()
 
