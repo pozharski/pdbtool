@@ -281,11 +281,14 @@ class hbond_pdbase(pdbase):
                             print("%5.2f %7.1f %7.1f " % (hb.d, hb.angle1, hb.tor1) + "%10.3g "*len(pv) % tuple(pv), end='\r')
         print("%d hydrogen bonds passed the filter                    " % self.get_hbond_number())
         self.commit()
-    def remove_metals(self, pisabase):
+    def remove_metals(self, pisabase, sql_rebuild=True):
         hbs = self.get_hbond_codetree()
         print("Remove false bonds due to metal sites")
         print("Database contains %d hydrogen bonds" % self.get_hbond_number())
-        self.delete_all('hydrogen_bonds')
+        if sql_rebuild:
+            self.delete_all('hydrogen_bonds')
+        else:
+            stmt = "DELETE FROM hydrogen_bonds WHERE pdbcode=? AND (atomi1=? or atomi2=?)"
         for code, items in hbs.items():
             print("Processing %s..." % code)
             molpath = pisabase.get_path(code)
@@ -295,15 +298,20 @@ class hbond_pdbase(pdbase):
             if len(metals):
                 hbis = set(sum([[x.atomi1,x.atomi2] for x in items], []))
                 nearmetals = set(mol.atom_lister('vicinity', listik=hbis, corelist=metals))
-                print('Coordinated atoms: ',len(nearmetals))
-                for item in items:
-                    if not len(nearmetals.intersection([item.atomi1,item.atomi2])):
-                        self.insert_hb(code,item)
-                    else:
-                        print("Removed %s %31s  " % (code, item.report()))
+                print('Coordinated atoms to remove: ',len(nearmetals))
+                if sql_rebuild:
+                    for item in items:
+                        if not len(nearmetals.intersection([item.atomi1,item.atomi2])):
+                            if sql_rebuild:
+                                self.insert_hb(code,item)
+                else:
+                    for atomi in nearmetals:
+                        args = (code, atomi, atomi)
+                        self.execute(stmt, args)
             else:
-                for item in items:
-                    self.insert_hb(code,item)
+                if sql_rebuild:
+                    for item in items:
+                        self.insert_hb(code,item)
         print("%d hydrogen bonds passed the filter                    " % self.get_hbond_number())
         self.commit()
 

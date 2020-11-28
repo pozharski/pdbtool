@@ -18,6 +18,8 @@ parser.add_argument('--sqlout', default='hbfiltered.sqlite',
                     help='Output HB database file.  Defaults to hbfiltered.sqlite.')
 parser.add_argument('--in-place', action='store_true',
                     help='Modify the database file in place, use with caution')
+parser.add_argument('--sql-rebuild', action='store_true',
+                    help='Rebuild SQL database, which may or not be a faster option in some cases')
 parser.add_argument('--mmsize',
                     help='Oligomerization number.  Could be a comma separated list.')
 parser.add_argument('--no-metals', action='store_true',
@@ -55,7 +57,7 @@ else:
 #hbs = hpdbase.get_hbonds()
 
 if args.no_metals:
-    hpdbout.remove_metals(pisabase)
+    hpdbout.remove_metals(pisabase, args.sql_rebuild)
 
 if args.mmsize is not None:
     mmsizes = [int(x) for x in args.mmsize.split(',')]
