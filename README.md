@@ -39,3 +39,5 @@ ln -s $name $fname
 done
 ```
 This generates symbolic links so that whenever you activate the environment, all the scripts you can run in scripts subfolder are immediately available without the need to provide full path to them. 
+
+Additional information about individual scripts etc is available in wiki.
