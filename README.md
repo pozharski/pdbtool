@@ -26,3 +26,16 @@ $ git clone https://github.com/pozharski/pdbtool.git
 $ pip3 install --upgrade pip
 $ pip3 install scipy matplotlib
 ```
+Good to go.  For additional convenience, run this brief bash script
+
+```
+#!/bin/bash
+cd bin
+for name in $(ls ../pdbtool/scripts/*.py)
+do 
+fname=$(basename $name)
+fname=${fname%.*}
+ln -s $name $fname
+done
+```
+This generates symbolic links so that whenever you activate the environment, all the scripts you can run in scripts subfolder are immediately available without the need to provide full path to them. 
