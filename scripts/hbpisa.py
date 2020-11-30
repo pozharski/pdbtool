@@ -16,6 +16,8 @@ parser.add_argument('--sqlpisa', default='pisa.sqlite',
                     help='PISA database file.  Defaults to pisa.sqlite.')
 parser.add_argument('--hbtype', '-b',
                     help="Hydrogen bond type (mandatory).")
+parser.add_argument('--dmax', default=3.2, type=float,
+                    help='Maximium distance between polar atoms')
 parser.add_argument('--do-checks', action='store_true',
                     help='Check the PISA database integrity.')
 args = parser.parse_args()
@@ -45,7 +47,7 @@ for code in hpdbase.filter_codes(pisabase.fetch_codes()):
         else:
             print(code + ' appears to be multi-model, skip', file=sys.stderr)
     else:
-        hb = HydroBonds(mol)
+        hb = HydroBonds(mol, rcutoff=args.dmax)
         hpdbase.insert_new_code(code)
         for item in hb.get_readers():
             hpdbase.insert_hb(code, item)
