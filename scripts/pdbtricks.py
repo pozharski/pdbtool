@@ -44,6 +44,7 @@ are:
                         cutoff distance
     hbonds              Prints the list of hydrogen bonds
     range_bs            Prints the average B-factor for a selected range
+    rgyration           Prints radius of gyration for a selected range
 
 --------------------------------------------------------------------------------
 
@@ -68,7 +69,13 @@ are:
                         default = [],
                         metavar = '', help='Action to perform')
     parser.add_argument('-p', '--outprint', action='append',
-                        choices = ['bvalue', 'chains', 'phipsi', 'bcontrast', 'resgem', 'range_bs'],
+                        choices = [ 'bvalue', 
+                                    'chains', 
+                                    'phipsi', 
+                                    'bcontrast', 
+                                    'resgem', 
+                                    'range_bs',
+                                    'rgyration'],
                         default = [],
                         metavar='', help='Information to print out.')
     parser.add_argument('--resid', 

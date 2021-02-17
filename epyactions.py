@@ -113,4 +113,12 @@ def print_range_bs(args, model):
         print("%6.2f" % model.extract_chains(args.chids).GetAverageBfactor())
     else:
         print("%6.2f" % model.GetAverageBfactor())
+
+def print_rgyration(args, model):
+    if args.ranges:
+        print("%6.2f" % model.extract_range(args.ranges).Rgyration())
+    elif args.chids:
+        print("%6.2f" % model.extract_chains(args.chids).Rgyration())
+    else:
+        print("%6.2f" % model.Rgyration())
     
