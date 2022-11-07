@@ -92,6 +92,9 @@ are:
                               A,50-55,72-80/B,50-55 will select residues \
                               50 to 55 and 72 to 80 in chain A, and also \
                               residues 50 to 55 in chain B.')
+    parser.add_argument('--rinverse', 
+                        action='store_true',
+                        help='Invert selection ranges.')
     parser.add_argument('--window-size', type=int, default=5,
                         help='Sliding sequence window size.')
     parser.add_argument('--rcutoff', type=float, default=4.0,
@@ -99,7 +102,7 @@ are:
     args = parser.parse_args()
 
     from pdbtool import ReadPDBfile as read_pdb_file
-    from helper import range_check, parse_ranges
+    from helper import parse_ranges
     from scipy import array
 
     model = read_pdb_file(args.inpath)

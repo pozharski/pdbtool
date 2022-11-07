@@ -30,13 +30,13 @@ def rjust_resid(args, model):
 
 def extract_ranges(args, model):
     if args.ranges:
-        model.extract_range(args.ranges).writePDB(args.outpath)
+        model.extract_range(args.ranges, inverse=args.rinverse).writePDB(args.outpath)
     else:
         print('This does not compute - extract but no ranges listed?')
 
 def tinertia_ranges(args, model):
     if args.ranges:
-        ramodel = model.extract_range(args.ranges)
+        ramodel = model.extract_range(args.ranges, inverse=args.rinverse)
         tin = ramodel.GetInertiaTensor('backbone')
     else:
         tin = model.GetInertiaTensor('backbone')
@@ -107,7 +107,7 @@ def print_resgem(args, model):
 
 def print_range_bs(args, model):
     if args.ranges:
-        print("%6.2f" % model.extract_range(args.ranges).GetAverageBfactor())
+        print("%6.2f" % model.extract_range(args.ranges, inverse=args.rinverse).GetAverageBfactor())
     elif args.chids:
         print("%6.2f" % model.extract_chains(args.chids).GetAverageBfactor())
     else:

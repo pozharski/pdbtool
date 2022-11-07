@@ -1851,7 +1851,7 @@ class pdbmolecule:
                 fout.write(atom.GetAnisouRecord())
             fout.write('END   \n')
 
-    def extract_range(self, ranges):
+    def extract_range(self, ranges, inverse=False):
         ''' Returns the copy of the molecule that only contains atoms from
             the supplied dictionary of ranges.The selection is defined by ranges
             dictionary, which has chain IDs as keys and list of tuples for 
@@ -1864,10 +1864,19 @@ class pdbmolecule:
         for atom in self.atoms:
             chid, resn = atom.GetChain(), atom.resSeq()
             if atom.GetChain() in ranges:
+                extracted_atoms.append(atom.copy())
                 for limits in ranges[atom.GetChain()]:
                     if self.__range_checker_(resn, limits):
-                        extracted_atoms.append(atom.copy())
+                        if inverse:
+                            extracted_atoms.pop()
                         break
+                    if not inverse:
+                        extracted_atoms.pop()
+#            if atom.GetChain() in ranges:
+#                for limits in ranges[atom.GetChain()]:
+#                    if self.__range_checker_(resn, limits):
+#                        extracted_atoms.append(atom.copy())
+#                        break
         return pdbmolecule(atoms=extracted_atoms, cell=self.cell)
 
     def range_residues(self, ranges):

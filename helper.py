@@ -95,10 +95,11 @@ def range_check(value, limits):
 def parse_ranges(ranges, chids):
     ranges = dict([tuple([r[0], [tuple([int(x) for x in s.split('-')]) for s in r.split(',')[1:]]]) for r in ranges.split('/')])
     try:
-        uniranges = ranges.pop('*')
-        for chid in chids:
-            ranges[chid] = ranges.get(chid, [])
-            ranges[chid].extend(uniranges)
+        uniranges = ranges.pop('*',False)
+        if uniranges:
+            for chid in chids:
+                ranges[chid] = ranges.get(chid, [])
+                ranges[chid].extend(uniranges)
     except KeyError:
         pass
     return ranges
