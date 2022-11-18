@@ -26,6 +26,8 @@ defined by -a option. Allowed actions are:
     center-orient       Centers the molecule at the center of mass and
                         orients it along inertia axes
     set-b-per-chain     Sets B-factors to chain average
+    set-b-per-group     Sets B-factors to residue grouped averages
+    set-b-per-residue   Sets B-factors to residue average
 
 Program will also print various information extracted from the input 
 PDB file. Output is defined by -p option.  Currently supported choices 
@@ -34,6 +36,9 @@ are:
     bvalue              Prints the list of average per-residue Bfactors, 
                         including all atoms, backbone and side chain 
                         columns.
+    bsum                Prints the list of sums of residue Bfactors
+                        instead of averages.  Useful when B-factor
+                        column is used to store some additive values.
     chains              Prints the list of chains with number of atoms 
                         in each and average B factor.
     phipsi              Prints the list of backbone torsions.
@@ -65,11 +70,13 @@ are:
                                     'tinertia-slider',
                                     'center-orient',
                                     'set-b-per-chain',
+                                    'set-b-per-group',
+                                    'set-b-per-residue',
                                     'strip-waters'],
                         default = [],
                         metavar = '', help='Action to perform')
     parser.add_argument('-p', '--outprint', action='append',
-                        choices = [ 'bvalue', 
+                        choices = [ 'bvalue',
                                     'chains', 
                                     'phipsi', 
                                     'bcontrast', 
@@ -85,9 +92,6 @@ are:
                         help='Print per-residue B-balues.')
     parser.add_argument('--chids',
                         help='Chain IDs for various selections.')
-    parser.add_argument('--extract-chains',
-                        action='store_true',
-                        help='Extract specified chains.')
     parser.add_argument('--rjust-resid', 
                         action='store_true',
                         help='Make sure resids are right-justified.')
@@ -106,6 +110,10 @@ are:
                         help='Sliding sequence window size.')
     parser.add_argument('--rcutoff', type=float, default=4.0,
                         help='Distance cutoff, defaults to 4A')
+    parser.add_argument('--bmode',
+                        choices = [ 'lin', 'rms', 'sum'],
+                        default = 'lin',
+                        metavar='', help='B averaging mode')
     args = parser.parse_args()
 
     from pdbtool import ReadPDBfile as read_pdb_file

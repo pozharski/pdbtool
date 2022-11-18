@@ -1,5 +1,6 @@
 from helper import range_check
 import numpy as np
+from pdbtool import pdbmolecule
 
 def strip_waters(args, model):
     model.WriteAtomList(args.outpath, model.atom_lister('notwater'), 'cell')
@@ -15,6 +16,16 @@ def set_b_per_chain(args, model):
     remodel = model.copy()
     for key,value in bavs.items():
         remodel.SetBfactorValues(float(value), what='chid', chid=key)
+    remodel.writePDB(args.outpath)
+
+def set_b_per_group(args, model):
+    remodel = model.copy()
+    remodel.SetB_PerResidue(mode=args.bmode)
+    remodel.writePDB(args.outpath)
+
+def set_b_per_residue(args, model):
+    remodel = model.copy()
+    remodel.SetB_PerResidue(mode=args.bmode, single_value=True)
     remodel.writePDB(args.outpath)
 
 def rename_chains(args, model):
@@ -57,7 +68,7 @@ def center_orient(args, model):
 
 def print_bvalue(args, model):
     resnames = model.GetResidueNames()
-    resids, b0, b1, b2 = model.GetResidueBvectorByChain()
+    resids, b0, b1, b2 = model.GetResidueBvectorByChain(mode=args.bmode)
     for chid in resids:
         if not args.chids or chid in args.chids:
             for (i, resnum) in enumerate(resids[chid]):
@@ -122,3 +133,11 @@ def print_rgyration(args, model):
     else:
         print("%6.2f" % model.Rgyration())
     
+def bdifference(args, models):
+    atoms = []
+    atommatch = models[0].AtomMatch(models[1])
+    for (i,k) in enumerate(sorted(atommatch.keys())):
+        atoms.append(models[0].GetAtom(k))
+        atoms[-1].SetB(atoms[-1].GetB()-models[1].GetAtom(atommatch[k]).GetB())
+        print("%.1f %%             \r" % (100*i/len(atommatch)), end="")
+    pdbmolecule(atoms=atoms).writePDB(args.outpath1)

@@ -1000,6 +1000,12 @@ class pdbmolecule:
                     altatoms.append(i)
         return altatoms
 
+    def AtomMatch(self, other):
+        atoms1 = dict([(v,i) for (i,v) in enumerate(self.GetAtomTitles())])
+        atoms2 = dict([(v,i) for (i,v) in enumerate(other.GetAtomTitles())])
+        atoms_in_both = set(atoms1.keys()).intersection(atoms2.keys())
+        return dict([(atoms1[t],atoms2[t]) for t in atoms_in_both])
+
     def shift(self, T, listik=False):
         listik = self.__ensure_listik_(listik)
         T = array(T)
@@ -1094,6 +1100,9 @@ class pdbmolecule:
         ''' Returns the formatted title of the atom (e.g. "ALA L27B C", "TYR L32  CG"). '''
         return self.atoms[i].GetAtomTitle()
 
+    def GetAtomTitles(self):
+        return [x.GetAtomTitle() for x in self.atoms]
+
     def GetAtomXYZarray(self,i): #convert to GetR
         ''' Returns the vector of atom coordinates as [x,y,z]. '''
         return self.atoms[i].GetXYZarray()
@@ -1131,12 +1140,16 @@ class pdbmolecule:
         bs = [residues[resid].GetGroupedBs(mode) for resid in resids]
         return (resids, bs)
 
-    def GetResidueBvectorByChain(self):
+    def SetB_PerResidue(self, mode='lin', single_value=False):
+        for k, v in self.get_residues().items():
+            v.SetGroupedBs(mode=mode, single_value=single_value)
+
+    def GetResidueBvectorByChain(self, mode='lin'):
         b0, b1, b2, resids = {}, {}, {}, {}
         residues = self.get_residues()
         for resid in sorted(residues.keys()):
             chid = resid[0]
-            ball, bmain, bside = residues[resid].GetGroupedBs()
+            ball, bmain, bside = residues[resid].GetGroupedBs(mode)
             if chid in resids:
                 resids[chid].append(resid[1:])
                 b0[chid].append(ball)
@@ -2691,12 +2704,23 @@ class pdbresidue:
             else:
                 atom.SetB(bmean)
 
+    def SetGroupedBs(self, mode='lin', single_value=False):
+        b0, b1, b2 = self.GetGroupedBs(mode=mode)
+        if single_value:
+            for x in self.origatoms:
+                x.SetB(b0)
+        else:
+            for x in self.origatoms:
+                x.SetB(b1 if x.IsBackbone() else b2)
+
     def GetGroupedBs(self, mode='lin'):
         ''' Returns average B-factor overall and for backbone and non-backbone 
             atoms. Default mode is linear average, but 'rms' will return root 
             mean square, which can be useful if the B-factor column is used to
             carry some other parameter that needs to be averaged this way.
-            Averaging is occupancy-weighted.'''
+            Averaging is occupancy-weighted. Another mode is 'sum', which 
+            returns sum across groups (may be useful if B-factor column
+            carries, say, buried surface area).'''
         b = array([x.GetB() for x in self.origatoms])
         o = array([x.GetOccupancy() for x in self.origatoms])
         f = array([x.IsBackbone() for x in self.origatoms]).astype(int)
@@ -2709,6 +2733,8 @@ class pdbresidue:
             return [sqrt(sum(o*b**2)/n_all) if n_all else float('nan'),
                     sqrt(sum(f*o*b**2)/n_bb) if n_bb else float('nan'),
                     sqrt(sum((1-f)*o*b**2)/n_sc) if n_sc else float('nan')]
+        elif mode == 'sum':
+            return [sum(b*o), sum(b*f*o), sum(b*(1-f)*o)]
         else:
             raise KeyError("Incorrect b-factor averaging mode '"+mode+"'")
 
