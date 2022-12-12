@@ -82,8 +82,7 @@ def print_chains(args, model):
     chanums = model.GetChains()
     bavs = model.GetChainAverageBfactor()
     print('Chain   Atoms   <B>')
-    for key in chanums:
-        print(key + str(chanums[key]).rjust(12) + " %6.2f" % bavs[key])
+    print('\n'.join(["%s %12d %6.2f %8.2f %8.2f %8.2f" % tuple([k,len(v),model.GetBaverage(v)]+model.GetCoM(v).tolist()) for (k,v) in model.atom_splitter('chain').items()]))
 
 def print_phipsi(args, model):
     phi, psi = model.PhiPsiList()

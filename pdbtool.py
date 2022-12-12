@@ -1409,6 +1409,26 @@ class pdbmolecule:
         elif whatlow == 'altgroup':
             return [i for i in listik if self.atoms[i].alt(kwargs['atomid'])]
 
+    def atom_splitter(self, what, listik=False, *args, **kwargs):
+        ''' Returns the dictionary of atom groups split by a chosen
+            parameter. Recognized values are (any mix of lower and 
+            upper case characters):
+            'chain'             - split by chain ID    
+        '''
+        whatlow = what.lower()
+        listik = self.__ensure_listik_(listik)
+        if whatlow == 'chain':
+            splidict = dict([(x,[]) for x in sorted(set([a.chainID() for a in [self.atoms[i] for i in listik]]))])
+            for i in listik:
+                splidict[self.atoms[i].chainID()].append(i)
+        else:
+            return None
+        return splidict
+
+    def list2atoms(self, listik):
+        listik = self.__ensure_listik_(listik)
+        return [self.atoms[i] for i in listik]
+
     def merge_listers(self, whats, listik=False, *args, **kwargs):
         '''
             Merge multiple atom listers.
@@ -1764,6 +1784,10 @@ class pdbmolecule:
         mo = self.GetMOVector(listik=listik)
         r = self.GetCoordinateArray(listik=listik)
         return (mo*r.T).sum(1)/sum(mo)
+
+    def GetBaverage(self, listik=False):
+        atoms = self.list2atoms(listik)
+        return sum([a.GetB()*a.GetOccupancy() for a in atoms])/sum([a.GetOccupancy() for a in atoms])
 
     def Rgyration(self, listik=False):
         mo = self.GetMOVector(listik=listik).T
