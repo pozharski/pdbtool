@@ -881,6 +881,10 @@ class pdbmolecule:
             with indices in listik are removed. '''
         for i in sorted(listik, reverse=True):
             del self.atoms[i]
+        self.SerialReset()
+
+    def DeleteWaters(self):
+        self.DeleteAtoms(self.atom_lister('water'))
 
     def InsertAtom(self, atoms, atomi=0):
         ''' Insert atoms before position atomi in the atom list.  Notice that an atom

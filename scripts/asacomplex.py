@@ -6,7 +6,7 @@ headerhelp = \
     Components of the complex are defined via first/second parameters
     with syntax of chain,start,end (comma-separated, no spaces). 
     Separate chains with forward slash. 
-    Example: A,50-55,72-80/B,50-55 
+    Example: A:50-55,72-80/B:50-55 
     will select residues 50 to 55 and 72 to 80 in chain A, and also 
                 residues 50 to 55              in chain B.
     If second selection is omitted, second component will comprise the
@@ -30,6 +30,8 @@ parser.add_argument('--first',
                     help='First component definition, required unless components are provided explicitly as PDB files.')
 parser.add_argument('--second', 
                     help='Second component definition.  If omitted, assumes that it is the rest of the complex.')
+parser.add_argument('--keep-waters', action='store_true',
+                    help='Default is to remove waters, this option forces their inclusion in the models.  FreeSASA module may ignore these anyway.')
 parser.add_argument('--csv', 
                     help='Output CSV file')
 parser.add_argument('--bpdb', 
@@ -51,6 +53,8 @@ if args.inpath2:
 else:
     range1 = mol.parse_range(args.first)
     mol1 = mol.extract_range(range1)
+    if not args.keep_waters:
+        mol1.DeleteWaters()
     fout1 = mktemp(os.extsep+'pdb')
     mol1.writePDB(fout1)
     if args.second is None:
@@ -59,6 +63,8 @@ else:
     else:
         range2 = mol.parse_range(args.second)
         mol2 = mol.extract_range(range2)
+    if not args.keep_waters:
+        mol2.DeleteWaters()
     fout2 = mktemp(os.extsep+'pdb')
     mol2.writePDB(fout2)
 if args.inpath3:
@@ -85,22 +91,26 @@ fnan = float('nan')
 
 bsa = {}
 
+if args.verbosity>1:
+    print("Residue  Total Apolar  Polar    BB    SC    Component")
+
 for chid,chv in asa3.residueAreas().items():
     bsa[chid] = {}
     for resi, resv in chv.items():
         resv1 = d1[chid].get(resi,None) if chid in d1 else None
         resv2 = d2[chid].get(resi,None) if chid in d2 else None
         resvC = resv1 if resv1 else resv2
-        bsa[chid][resi] = [resvC.__getattribute__(k) if resvC else fnan for k in ['total','apolar','polar','mainChain','sideChain']]+[1 if resv1 else 2]
+        bsa[chid][resi] = [resvC.__getattribute__(k)-resv.__getattribute__(k) if resvC else fnan for k in ['total','apolar','polar','mainChain','sideChain']]+[1 if resv1 else 2]
         if args.verbosity>1:
-            print("%1s %-5d %5.1f %5.1f %5.1f %5.1f %5.1f %2d" % tuple([chid,int(resi)]+bsa[chid][resi]))
+            if args.verbosity>2 or bsa[chid][resi][0] > 0.1:
+                print("%1s %-5d %6.1f %6.1f %6.1f %6.1f %6.1f %6d" % tuple([chid,int(resi)]+bsa[chid][resi]))
 
 comp1, comp2  = {}, {}
 for chid,chv in bsa.items():
     comp1[chid] = [sum(x) for x in zip(*[resv[:-1] for resi, resv in chv.items() if resv[-1]==1])]
     comp2[chid] = [sum(x) for x in zip(*[resv[:-1] for resi, resv in chv.items() if resv[-1]==2])]
 
-print("Component    Total     Apolar     Polar    Backbone  Siode chain")
+print("Component    Total     Apolar     Polar    Backbone  Side chain")
 
 print("    1      %9.1f %9.1f %9.1f %9.1f %9.1f" % tuple([sum(x) for x in zip(*[v for k,v in comp1.items() if v])]))
 print("    2      %9.1f %9.1f %9.1f %9.1f %9.1f" % tuple([sum(x) for x in zip(*[v for k,v in comp2.items() if v])]))
@@ -114,46 +124,3 @@ if args.csv:
         for chid,chv in bsa.items():
             for resi, resv in chv.items():
                 csv_writer.writerow([chid,resi]+resv)
-
-sys.exit()
-
-print("--- Total area ---")
-print("%.0f  ---> %.0f" % (asa1.totalArea(), asa2.totalArea()))
-print("--- Initial conformation ---")
-print("ChainID      Apolar     Polar       Main      Side       Total")
-print('\n'.join(['%s       %10.0f %10.0f %10.0f %10.0f %10.0f ' % t for t in [(k,sum([r.apolar for r in v.values()]),
-                                                             sum([r.polar for r in v.values()]),
-                                                             sum([r.mainChain for r in v.values()]),
-                                                             sum([r.sideChain for r in v.values()]),
-                                                             sum([r.total for r in v.values()])) for k, v in asa1.residueAreas().items()]]))
-print("--- Final conformation ---")
-print("ChainID      Apolar     Polar       Main      Side       Total")
-print('\n'.join(['%s       %10.0f %10.0f %10.0f %10.0f %10.0f ' % t for t in [(k,sum([r.apolar for r in v.values()]),
-                                                             sum([r.polar for r in v.values()]),
-                                                             sum([r.mainChain for r in v.values()]),
-                                                             sum([r.sideChain for r in v.values()]),
-                                                             sum([r.total for r in v.values()])) for k, v in asa2.residueAreas().items()]]))
-print("--- Buried area ---")
-if args.chids:
-    chid1,chid2 = args.chids.split(',')
-    print("Apolar   : %10.0f A^2" % (sum([r.apolar for r in asa1.residueAreas()[chid1].values()]) - sum([r.apolar for r in asa2.residueAreas()[chid2].values()])))
-    print("Polar    : %10.0f A^2" % (sum([r.polar for r in asa1.residueAreas()[chid1].values()]) - sum([r.polar for r in asa2.residueAreas()[chid2].values()])))
-    print("Mainchain: %10.0f A^2" % (sum([r.mainChain for r in asa1.residueAreas()[chid1].values()]) - sum([r.mainChain for r in asa2.residueAreas()[chid2].values()])))
-    print("Sidechain: %10.0f A^2" % (sum([r.sideChain for r in asa1.residueAreas()[chid1].values()]) - sum([r.sideChain for r in asa2.residueAreas()[chid2].values()])))
-    print("Total    : %10.0f A^2" % (sum([r.total for r in asa1.residueAreas()[chid1].values()]) - sum([r.total for r in asa2.residueAreas()[chid2].values()])))
-else:
-    print("Apolar   : %10.0f A^2" % (sum([sum([r.apolar for r in v.values()]) for k, v in asa1.residueAreas().items()])-sum([sum([r.apolar for r in v.values()]) for k, v in asa2.residueAreas().items()])))
-    print("Polar    : %10.0f A^2" % (sum([sum([r.polar for r in v.values()]) for k, v in asa1.residueAreas().items()])-sum([sum([r.polar for r in v.values()]) for k, v in asa2.residueAreas().items()])))
-    print("Mainchain: %10.0f A^2" % (sum([sum([r.mainChain for r in v.values()]) for k, v in asa1.residueAreas().items()])-sum([sum([r.mainChain for r in v.values()]) for k, v in asa2.residueAreas().items()])))
-    print("Sidechain: %10.0f A^2" % (sum([sum([r.sideChain for r in v.values()]) for k, v in asa1.residueAreas().items()])-sum([sum([r.sideChain for r in v.values()]) for k, v in asa2.residueAreas().items()])))
-    print("Total    : %10.0f A^2" % (sum([sum([r.total for r in v.values()]) for k, v in asa1.residueAreas().items()])-sum([sum([r.total for r in v.values()]) for k, v in asa2.residueAreas().items()])))
-
-if args.bpdb:
-    from pdbtool import ReadPDBfile
-    model1 = ReadPDBfile(args.inpath1)
-    model1.SetBfactorValues([asa1.atomArea(i)-asa2.atomArea(i) for i in range(model1.GetAtomNumber())])
-    model1.writePDB(args.inpath1+os.extsep+'asadiff'+os.extsep+'pdb')
-    model2 = ReadPDBfile(args.inpath2)
-    model2.SetBfactorValues([asa1.atomArea(i)-asa2.atomArea(i) for i in range(model1.GetAtomNumber())])
-    model2.writePDB(args.inpath2+os.extsep+'asadiff'+os.extsep+'pdb')
-
