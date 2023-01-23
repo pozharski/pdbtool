@@ -1,5 +1,5 @@
-from scipy import array, matrix, sqrt, arccos, degrees, pi, diag, matmul
-from scipy.linalg import eig, inv
+from numpy import array, matrix, sqrt, arccos, degrees, pi, diag, matmul
+from numpy.linalg import eig, inv
 
 class TInertia:
     '''

@@ -9,10 +9,11 @@ import pdbnames, SpaceGroups
 from helper import progressbar
 from rotate import transform_list
 from tinertia import TInertia
-from scipy.linalg import eigh
-from scipy import   array, cos, sin, pi, radians, sqrt, dot, cross, \
-                    randn, zeros, matrix, ones, floor, nonzero, \
+from numpy.linalg import eigh
+from numpy import   array, cos, sin, pi, radians, sqrt, dot, cross, \
+                    zeros, matrix, ones, floor, nonzero, \
                     degrees, arccos, arctan2
+from numpy.random import randn
 from collections import Counter
 
 def read_multi_model_pdb(pdbin, remark_parser=None):
@@ -800,6 +801,18 @@ class pdbmolecule:
     def __iter__(self):
         return self.atoms.__iter__()
 
+    def parse_range(self, ranges):
+        retdix, lims = {}, self.get_chain_lims()
+        for k,v in [(k,v.split(',')) for k,v in [rr.split(':') for rr in ranges.split('/')]]:
+            retdix[k] = []
+            for r in v:
+                retdix[k].append([lims[k][i] if t=='' else int(t) for (i,t) in enumerate(r.split('-'))])
+        return retdix
+
+    def get_chain_lims(self):
+        resnums = [(a.chainID(),a.resSeq()) for a in self.atoms]
+        return dict([(k,(min(v),max(v))) for k,v in [(chid, [v for k,v in resnums if k==chid]) for chid in set([k for k,v in resnums])]])
+
     def backbone(self):
         return backbone(self)
 
@@ -886,6 +899,7 @@ class pdbmolecule:
             self.atoms += atoms
         else:
             self.atoms.append(atoms)
+        self.SerialReset()
 
     def AppendMolecule(self, other):
         ''' Append atoms from another molecule. No sanity checks. '''
@@ -1917,9 +1931,10 @@ class pdbmolecule:
                     if self.__range_checker_(resn, limits):
                         if inverse:
                             extracted_atoms.pop()
-                        break
-                    if not inverse:
+                    elif not inverse:
                         extracted_atoms.pop()
+            elif inverse:
+                extracted_atoms.append(atom.copy())
 #            if atom.GetChain() in ranges:
 #                for limits in ranges[atom.GetChain()]:
 #                    if self.__range_checker_(resn, limits):

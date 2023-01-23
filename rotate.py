@@ -1,4 +1,4 @@
-from scipy import array, dot
+from numpy import array, dot
 from math import sin, cos
 
 def euler_matrix(a,b,g):
